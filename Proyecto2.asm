@@ -49,6 +49,7 @@ PuntajeE2:	.word 0
 Init:
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
+<<<<<<< HEAD
 	#jal CargarNombres
 	jal CargarArchivo  #Abre el archivo,lee su contenido y lo guarda en Archivo
 	la $a0,Archivo
@@ -59,6 +60,12 @@ Init:
 	addi $sp,$sp,4
 	lw $ra,0($sp)
 	jr $ra
+=======
+	jal CargarNombres
+	jal CargarFichas
+	addi $sp,$sp,4
+	lw $ra,0($sp)
+>>>>>>> cambios
 	
 #USAR UNA MACRO PARA IMPRIMIR COMENTARIOS?
 CargarNombres:
@@ -93,7 +100,11 @@ LeerNombre:
 	jr $ra
 	
 
+<<<<<<< HEAD
 CargarArchivo:
+=======
+CargarFichas:
+>>>>>>> cambios
 
 	li $v0,13           #open a file
 	li $a1,0            # file flag (read)
@@ -113,8 +124,12 @@ CargarArchivo:
 	li $v0, 16       # system call for close file
 	move $a0, $s6      # file descriptor to close
   	syscall            # close file
+<<<<<<< HEAD
 	jr $ra
   	  	
+=======
+  	
+>>>>>>> cambios
 LoadError:
 	la $a0,MensajeLoadError
 	li $v0,4
@@ -124,6 +139,7 @@ LoadError:
 	syscall
 	
 
+<<<<<<< HEAD
 CargarFichas:
 	
 	lb $a3,1($a0)			#Carga en $a3 el primer numero del par (a,b) 
@@ -134,3 +150,6 @@ CargarFichas:
 	addi $a1,$a1,2
 	bne $a1,$a2,CargarFichas
 	jr $ra
+=======
+
+>>>>>>> cambios
