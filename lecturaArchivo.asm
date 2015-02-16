@@ -1,6 +1,6 @@
 .data
 
-path: .asciiz "Domino.txt"
+path: .asciiz "PIEDRAS.txt"
 .align 1 #Si se quita, el comienzo de los valores del archivo cargado empieza en 1003
 textSpace: .space 112 #Si el formato de entrada es todas las fichas en linea: 141201066652... entonces es suficiente con 56
 		      #si el formato es un par de numeros por cada linea del archivo (se podria dejar un poco mas por si acaso)

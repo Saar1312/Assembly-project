@@ -1,4 +1,4 @@
-       .text
+.text
          la $a0,str1 #Load and print string asking for string
          li $v0,4
          syscall
