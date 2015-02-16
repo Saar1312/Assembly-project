@@ -49,10 +49,23 @@ PuntajeE2:	.word 0
 Init:
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
+<<<<<<< HEAD
+	#jal CargarNombres
+	jal CargarArchivo  #Abre el archivo,lee su contenido y lo guarda en Archivo
+	la $a0,Archivo
+	la $a1,Fichas
+	move $a2,$a1			#Carga en a2 el valor de a1 para comparar si ya se cargo el arreglo completo ($a1 = $a2+28)
+	addi $a2,$a2,56
+	jal CargarFichas   #Separa las fichas de los caracteres como ",()" y los coloca en un arreglo
+	addi $sp,$sp,4
+	lw $ra,0($sp)
+	jr $ra
+=======
 	jal CargarNombres
 	jal CargarFichas
 	addi $sp,$sp,4
 	lw $ra,0($sp)
+>>>>>>> cambios
 	
 #USAR UNA MACRO PARA IMPRIMIR COMENTARIOS?
 CargarNombres:
@@ -87,7 +100,11 @@ LeerNombre:
 	jr $ra
 	
 
+<<<<<<< HEAD
+CargarArchivo:
+=======
 CargarFichas:
+>>>>>>> cambios
 
 	li $v0,13           #open a file
 	li $a1,0            # file flag (read)
@@ -107,7 +124,12 @@ CargarFichas:
 	li $v0, 16       # system call for close file
 	move $a0, $s6      # file descriptor to close
   	syscall            # close file
+<<<<<<< HEAD
+	jr $ra
+  	  	
+=======
   	
+>>>>>>> cambios
 LoadError:
 	la $a0,MensajeLoadError
 	li $v0,4
@@ -117,4 +139,17 @@ LoadError:
 	syscall
 	
 
+<<<<<<< HEAD
+CargarFichas:
+	
+	lb $a3,1($a0)			#Carga en $a3 el primer numero del par (a,b) 
+	sb $a3,0($a1)			#Guarda en el arreglo Fichas el primer numero del par
+	lb $a3,3($a0)
+	sb $a3,1($a1)
+	addi $a0,$a0,5
+	addi $a1,$a1,2
+	bne $a1,$a2,CargarFichas
+	jr $ra
+=======
 
+>>>>>>> cambios
