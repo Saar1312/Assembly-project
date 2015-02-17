@@ -7,6 +7,7 @@ Path:    .asciiz "PIEDRAS.txt"
 SaltoLinea: .asciiz "\n"
 Mensaje1:.asciiz "Por favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
 MensajeLoadError: .ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
+ImpresionNumero: .space 4
 
 NombreJ1: .space 20
 NombreJ2: .space 20
@@ -14,10 +15,10 @@ NombreJ3: .space 20
 NombreJ4: .space 20
 
 Archivo: .space 140	#Se requieren de 5 bytes por ficha para leer las 28 fichas con el formato (1,2)
-Fichas:  .space 14      #Para sacar las fichas del formato de entrada (sin "(", ")", ",")
+Fichas:  .space 56      #Para sacar las fichas del formato de entrada (sin "(", ")", ",")
 .align 2
 
-Tablero: .space 84	#Para que cada ficha del tablero tenga una palabra para los dos numeros de la ficha y dos palabras para los
+Tablero: .space 336	#Para que cada ficha del tablero tenga una palabra para los dos numeros de la ficha y dos palabras para los
 			#apuntadores a la siguiente ficha y a la anterior (esto para poder imprimir el tablero mas facil)
 #FichasJ1:.space 4	#Para tener las fichas de cada jugador en un arreglo (cada ficha ocupa un byte). Cuando un jugador
 			#juegue alguna ficha, esta se quita del arreglo colocando 7 o -1 en lugar del valor que estaba
@@ -56,14 +57,21 @@ PuntajeE2:	.word 0
 						#En este punto $s0 contiene el jugador con la cochina
 Ciclo1:
 	jal Shuffle
-	
+	#jal HacerJugada	#El turno ya esta implicito en $t4, retorna en $s0 la direccion de la ficha que se desea jugar para que
+				#SalirPrimer la use como parametro
+	#jal SalirPrimero
 	
 	
 	
 	
 Ciclo2:
-	#jal ImprimirTablero
+	move $a1,$s6 
+	jal ImprimirTablero
 	
+	
+	#jal ImprimirFichas
+
+
 
 
 
@@ -76,7 +84,9 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
 	li $t8,0			#Numero de fichas tablero
 	li $t9,0			#Ficha jugada
-	
+	la $s6,Tablero			#Direccion de un extremo del tablero (solo al comienzo del juego)
+	addi $s7,$s6,1			#Direccion del otro extremo del tablero (solo al comienzo del juego)
+		
 	#Colocar aqui mensajes de bienvenida y eso
 	#jal ComienzoPrograma
 	sw $ra,0($sp)
@@ -104,9 +114,12 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	addi $a0,$zero,13878		#Pasando como parametro a la funcion SalirPrimero la ficha que queremos cambiar
 					#BuscarDoble6 retorno en $s0 la posicion del arreglo Fichas donde consiguio el doble 6
 					#y cambio el valor de $t4 al del jugador que tiene la cochina (coloco el turno al jugador)
-	
-	addi $a1,$s0			#Pasando como parametro a SalirPrimero la direccion del arreglo del jugador que posee la ficha
+	sw $t0,0($sp)
+	addi $sp,$sp,-4
+	add $a1,$zero,$s0	#Pasando como parametro a SalirPrimero la direccion del arreglo del jugador que posee la ficha ($s0 lo retorno BuscarDoble6)
 	jal SalirPrimero
+	addi $sp,$sp,4
+	lw $t0,0($sp)
 					#que no fue usado antes. Depende de si igual hay que guardar todo aunq no se haya usado antes	
 	addi $sp,$sp,4			#Recuperando para salir del jal Init
 	lw $ra,0($sp)
@@ -153,9 +166,9 @@ CargarArchivo:
 	add $a2, $zero, $zero    # file mode (unused)
 	syscall
 	
-	move $s6,$v0 #Guarda en $s6 el descriptor (numero que indica si se hizo bien el load (lanza num +)o si no (lanza num neg)
-	move $a0,$s6
-  	bltz $s6,LoadError
+	move $a3,$v0 #Guarda en $s6 el descriptor (numero que indica si se hizo bien el load (lanza num +)o si no (lanza num neg)
+	move $a0,$a3
+  	bltz $a3,LoadError
   	
 	li $v0,14
 	la $a1,Archivo
@@ -163,7 +176,7 @@ CargarArchivo:
 	syscall 
 	
 	li $v0, 16       # system call for close file
-	move $a0, $s6      # file descriptor to close
+	move $a0, $a3      # file descriptor to close
   	syscall            # close file
 	jr $ra
   	  	
@@ -264,23 +277,55 @@ SaleJ4:
 SalirPrimero: #En $a0 esta la ficha que se desea colocar
 	
 	#Intercambiando la ficha que esta en el tope del segmento de fichas de J1 con la cochina y bajando el apuntador del tope
-	move $a2,$t4		#Colocando el turno (1,2,3,4) en $t4 
+	move $a2,$t4		#Colocando el turno (1,2,3,4) en $a2 
 	addi $a2,$a2,-1		#Se le resta 1 para que pueda indicar la posicion del arreglo de apuntadores a las fichas de los jugad
 	sll $a2,$a2,3		#se multiplica x 8 y da el numero de bytes que hay que desplazarse desde el comienzo del arreglo 
 				#FichasJugadores para encontrar el apuntador del tope de la pila de fichas del jugador con el turno
 				#si se quitan los apuntadores al inicio de los arreglos de fichas hay que colocar 2 en vez de 3
-	addi $a2,$a2,$t2	#$t2 es un apuntador al tope del arreglo de fichas del jugador que jugo la pieza
-	addi $a2,$a2,-2		#Se baja el apuntador a la ficha anterior para indicar que hay una ficha menos
-	lw $a3,0($a2)		#se intercambian las fichas del tope con la ficha que se desea sacar del arreglo
-	sw $a0,0($a2)
-	sw $a3,0($a1)
-	sw $a0,0($t7)
-	sw $
+	add $a2,$a2,$t2	#$t2 es un apuntador al arreglo de apuntadores que indican el inicio y fin de las fichas de cada jugador en FichasJugadores
+				#$a2 es un apuntador al tope del arreglo de fichas del jugador que jugo la pieza
+	lw $t0,0($a2)
+	addi $t0,$t0,-2		#Se baja el apuntador a la ficha anterior para indicar que hay una ficha menos
+	lh $a3,0($t0)		#se intercambian las fichas del tope con la ficha que se desea sacar del arreglo
+	sh $a0,0($t0)
+	sh $a3,0($a1)
+	sh $a0,0($t7)		#Se agrega al tablero la primera ficha
+	addi $t4,$t4,1		#Cambia el turno
 	
+	
+	#sw $ra,0($sp)
+	#addi $sp,$sp,-4
+	#jal ContarFichas
+	#addi $sp,$sp,4
+	#lw $ra,0($sp)
 	jr $ra
 	
+#ContarFichas: Si se quiere determinar si el juego se tranca en cada turno hay que hacer una funcion que cuente el numero de fichas 
+#que hay en el tablero de cada valor	
 	
-	
+
+ImprimirTablero:
+
+	lb $a3,1($a1)		#Carga del tablero la parte izquierda de la ficha
+	sll $a3,$a3,8		#Hace un shift para poder hacer la mascara
+	ori $a3,$a3,40	#Or con una mascara 0000 0000 0010 1000 = 0 0 2 8 con 28 = "(" y 0 0 para dejar el byte del numero
+	sw $a3,ImpresionNumero	#Guarda en memoria lo que se desea imprimir
+	la $a0,ImpresionNumero	#lo carga de la memoria en $a0
+	addi $v0,$zero,4
+	syscall
+	lb $a2,0($a1)
+	sll $a2,$a2,8
+	ori $a2,$a2,44	#or con la mascara 0000 0000 0010 1100  = 0 0 2 C con 2C = ","
+	sw $a2,ImpresionNumero
+	la $a0,ImpresionNumero
+	syscall
+	addi $a0,$zero,41
+	sw $a0,ImpresionNumero
+	la $a0,ImpresionNumero		#No se coloca addi $v0,$zero,4 porque ya lo tiene de arriba
+	syscall
+	lw $a1,4($a1)		#Salta a la siguiente ficha del tablero
+	bnez $a1,ImprimirTablero
+	jr $ra
 	
 	
 	
