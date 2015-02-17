@@ -45,6 +45,7 @@ PuntajeE2:	.word 0
 	.text
 	
 	jal Init
+	addi $t5,$t5,-3
 
 Init:
 	sw $ra,0($sp)
@@ -56,14 +57,16 @@ Init:
 	move $a2,$a1			#Carga en a2 el valor de a1 para comparar si ya se cargo el arreglo completo ($a1 = $a2+28)
 	addi $a2,$a2,56
 	jal CargarFichas   #Separa las fichas de los caracteres como ",()" y los coloca en un arreglo
+	
+	#jal CargarNombres
+	
+	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
+	add $a3,$zero,27 			#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
+	
+	jal Shuffle
 	addi $sp,$sp,4
 	lw $ra,0($sp)
 	jr $ra
-	jal CargarNombres
-	jal CargarFichas
-	addi $sp,$sp,4
-	lw $ra,0($sp)
-	
 #USAR UNA MACRO PARA IMPRIMIR COMENTARIOS?
 CargarNombres:
 	sw $ra,0($sp)
@@ -138,3 +141,40 @@ CargarFichas:
 	addi $a1,$a1,2
 	bne $a1,$a2,CargarFichas
 	jr $ra
+
+
+Shuffle:
+	
+	add $a1,$zero,$a3		
+	addi $v0,$zero,42		#Se halla un numero random entre 0 y 28
+	addi $a0,$a0,0
+	syscall
+	sll $a3,$a3,1			#$a3 (recorre el arreglo) esta entre 0 y 26 y debe estar entre 0 y 56 para recorrer 
+	sll $a0,$a0,1			#el arreglo por medias palabras (de 2 en 2) al igual que el numero random debe ser par y estar entre 0y el valor de $a3
+	add $a3,$a3,$a2			#Se coloca $a3 y $a0 en funcion de la direccion del arreglo Fichas 
+	add $a0,$a0,$a2			
+	lh $a1,0($a0)
+	lh $t0,0($a3)			#PREGUNTAR SI HAY QUE GUARDA $T0 en la pila
+	sh $t0,0($a0)
+	sh $a1,0($a3)
+	sub $a3,$a3,$a2			#Se coloca $a3 y $a0 en funcion de la direccion del arreglo Fichas 
+	sub $a0,$a0,$a2		
+	srl $a3,$a3,1		
+	srl $a0,$a0,1
+	addi $a3,$a3,-1			#se va disminuyendo el recorredor hasta que llegue al inicio del arreglo
+	bnez $a3,Shuffle		#El shuffle termina cuando se ha terminado de recorrer todo el arreglo
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
