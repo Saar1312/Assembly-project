@@ -19,13 +19,18 @@ Archivo: .space 140	#Se requieren de 5 bytes por ficha para leer las 28 fichas c
 Fichas:  .space 14      #Para sacar las fichas del formato de entrada (sin "(", ")", ",")
 Tablero: .space 84	#Para que cada ficha del tablero tenga una palabra para los dos numeros de la ficha y dos palabras para los
 			#apuntadores a la siguiente ficha y a la anterior (esto para poder imprimir el tablero mas facil)
-FichasJ1:.space 4	#Para tener las fichas de cada jugador en un arreglo (cada ficha ocupa un byte). Cuando un jugador
+#FichasJ1:.space 4	#Para tener las fichas de cada jugador en un arreglo (cada ficha ocupa un byte). Cuando un jugador
 			#juegue alguna ficha, esta se quita del arreglo colocando 7 o -1 en lugar del valor que estaba
 
+
+FichasJ1: .space 2	#Cara jugador tendra dos apuntadores a sus fichas en el arreglo Fichas, de modo que no haya necesidad de crear
+			#un arreglo con fichas para cada jugador, sino que cada jugador tiene 7 fichas. Jugador uno: (Fichas,Fichas+12)
+			#Jugador dos: (Fichas+14,Fichas+26), J3: (Fichas+28,Fichas+40),J4 (Fichas+42,Fichas+54)
+			
 #FichasJugadores: .space 12 #Arreglo con las fichas de los jugadores en bytes. J1: 0(FichasJugadores) J2: 16(FichasJugadores) J3: 
-FichasJ2:.space 4
-FichasJ3:.space 4
-FichasJ4:.space 4
+#FichasJ2:.space 4
+#FichasJ3:.space 4
+#FichasJ4:.space 4
 
 #NumFichasTablero: .byte 0,0,0,0,0,0,0 #Arreglo con el numero REDUCIR CON EL ARREGLO PORQUE SON MUCHAS ETIQUETAS
 FichasCero:	.word 7 #Contador del numero de fichas que quedan en manos de los jugadores con el numero 1
@@ -61,10 +66,19 @@ Init:
 	#jal CargarNombres
 	
 	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
-	add $a3,$zero,27 			#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
+	add $a3,$zero,27 		#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
 	
 	jal Shuffle
+	
+	sw $s0,0($sp)
+	addi $sp,$sp,-4
+	la $a0,Fichas
+	addi $a1,$a0,56
+	jal BuscarDoble6
 	addi $sp,$sp,4
+	lw $s0,0($sp)			#Convencion BuscarDoble6 recuperando s0 (No se si no sea necesario guardar s0 xq ya se sabe
+					#que no fue usado antes. Depende de si igual hay que guardar todo aunq no se haya usado antes	
+	addi $sp,$sp,4			#Recuperando para salir del jal Init
 	lw $ra,0($sp)
 	jr $ra
 #USAR UNA MACRO PARA IMPRIMIR COMENTARIOS?
@@ -163,10 +177,45 @@ Shuffle:
 	srl $a0,$a0,1
 	addi $a3,$a3,-1			#se va disminuyendo el recorredor hasta que llegue al inicio del arreglo
 	bnez $a3,Shuffle		#El shuffle termina cuando se ha terminado de recorrer todo el arreglo
+	jr $ra
+	
+BuscarDoble6:				#CICLO
+	lh $a2,0($a0)
+	li $a3,13878			#Guardando el valor del doble 6 para poder buscarlo
+	beq $a2,$a3,Encontrado
+	addi $a0,$a0,2
+	bne $a0,$a1,BuscarDoble6
+	
+Encontrado:				#IF
+	
+					#En a1 esta el fin de la lista de fichas, le resta 42 y pregunta si la direccion donde encontro
+	addi $a1,$a1,-42		#el doble 6 es menor que la direccion donde terminan las fichas del jugador 1. Si es menor
+	blt $a0,$a1,SaleJ1		#entonces retorna 1, indicando que comienza el jugador 1, si no suma 14 y pregunta si 
+	addi $a1,$a1,14			#la direccion del doble 6 es menor que la dir donde terminan las fichas de j2, si es menor
+	blt $a0,$a1,SaleJ2		#entonces el doble 6 esta entre las fichas que pertenecen a j2
+	addi $a1,$a1,14
+	blt $a0,$a1,SaleJ3
+	addi $a1,$a1,14
+	blt $a0,$a1,SaleJ4			
+	
+SaleJ1:
+	addi $s0,$zero,1
+	jr $ra
+SaleJ2:
+	addi $s0,$zero,2
+	jr $ra
+SaleJ3:
+	addi $s0,$zero,3
+	jr $ra
+SaleJ4:
+	addi $s0,$zero,4
+	jr $ra
 	
 	
-	
-	
+
+
+
+
 	
 	
 	
