@@ -1,32 +1,34 @@
 	.data 
 
 #HAY ETIQUETAS QUE SE PUEDEN REDUCIR COLOCANDOLAS EN ARREGLOS 
-
+#PUEDE PONERSE UN SOLO ALIGN AL FINAL DE CARGAR TODOS LOS .ASCIIZ O SE PUEDE ALINEAR CADA MENSAJE PARA QUE EMPIECEN PALABRAS DISTINTAS
 
 Path:    .asciiz "PIEDRAS.txt"
-.align 1 #Si se quita, el comienzo de los valores del archivo cargado empieza en 1003
 SaltoLinea: .asciiz "\n"
-Mensaje1:.asciiz "Por favor introduzca su nombre (debe tener un maximo de 20 caracteres): "
-MensajeLoadError: .asciiz "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
+Mensaje1:.asciiz "Por favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
+MensajeLoadError: .ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
 
 NombreJ1: .space 20
 NombreJ2: .space 20
 NombreJ3: .space 20
 NombreJ4: .space 20
 
-	 .align 1 #Si se quita, el comienzo de los valores del archivo cargado empieza en 1003
 Archivo: .space 140	#Se requieren de 5 bytes por ficha para leer las 28 fichas con el formato (1,2)
 Fichas:  .space 14      #Para sacar las fichas del formato de entrada (sin "(", ")", ",")
+.align 2
+
 Tablero: .space 84	#Para que cada ficha del tablero tenga una palabra para los dos numeros de la ficha y dos palabras para los
 			#apuntadores a la siguiente ficha y a la anterior (esto para poder imprimir el tablero mas facil)
 #FichasJ1:.space 4	#Para tener las fichas de cada jugador en un arreglo (cada ficha ocupa un byte). Cuando un jugador
 			#juegue alguna ficha, esta se quita del arreglo colocando 7 o -1 en lugar del valor que estaba
+InicioTablero: .space 4
+FinTablero: .space 4
 
-
-FichasJ1: .space 2	#Cara jugador tendra dos apuntadores a sus fichas en el arreglo Fichas, de modo que no haya necesidad de crear
+FichasJugadores: .space 32	#Cada jugador tendra dos apuntadores a sus fichas en el arreglo Fichas, de modo que no haya necesidad de crear
 			#un arreglo con fichas para cada jugador, sino que cada jugador tiene 7 fichas. Jugador uno: (Fichas,Fichas+12)
 			#Jugador dos: (Fichas+14,Fichas+26), J3: (Fichas+28,Fichas+40),J4 (Fichas+42,Fichas+54)
-			
+
+
 #FichasJugadores: .space 12 #Arreglo con las fichas de los jugadores en bytes. J1: 0(FichasJugadores) J2: 16(FichasJugadores) J3: 
 #FichasJ2:.space 4
 #FichasJ3:.space 4
@@ -50,9 +52,33 @@ PuntajeE2:	.word 0
 	.text
 	
 	jal Init
-	addi $t5,$t5,-3
+	b Ciclo2			#Se podria poner a Init como una etiqueta y no como funcion y se salta a Ciclo2 dentro de ella
+						#En este punto $s0 contiene el jugador con la cochina
+Ciclo1:
+	jal Shuffle
+	
+	
+	
+	
+	
+Ciclo2:
+	#jal ImprimirTablero
+	
 
-Init:
+
+
+Init:	#Variables que seran globales durante todo el programa para no accesar tanto a memoria, se pueden quitar y pasar como parametros
+	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
+	la $t3,Fichas			#Comienzo del arreglo con las Fichas
+	li $t4,0			#Turno (1,2,3,4)
+	li $t5,0			#Puntos equipo1
+	li $t6,0			#Puntos equipo2
+	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
+	li $t8,0			#Numero de fichas tablero
+	li $t9,0			#Ficha jugada
+	
+	#Colocar aqui mensajes de bienvenida y eso
+	#jal ComienzoPrograma
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
 	#jal CargarNombres
@@ -68,19 +94,24 @@ Init:
 	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
 	add $a3,$zero,27 		#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
 	
-	jal Shuffle
-	
-	sw $s0,0($sp)
-	addi $sp,$sp,-4
+	la $a0,Fichas
+	jal RepartirFichas	#Coloca los apuntadores de cada jugador hacia el inicio y el fin de sus fichas en el arreglo Fichas
+			
 	la $a0,Fichas
 	addi $a1,$a0,56
 	jal BuscarDoble6
-	addi $sp,$sp,4
-	lw $s0,0($sp)			#Convencion BuscarDoble6 recuperando s0 (No se si no sea necesario guardar s0 xq ya se sabe
+	
+	addi $a0,$zero,13878		#Pasando como parametro a la funcion SalirPrimero la ficha que queremos cambiar
+					#BuscarDoble6 retorno en $s0 la posicion del arreglo Fichas donde consiguio el doble 6
+					#y cambio el valor de $t4 al del jugador que tiene la cochina (coloco el turno al jugador)
+	
+	addi $a1,$s0			#Pasando como parametro a SalirPrimero la direccion del arreglo del jugador que posee la ficha
+	jal SalirPrimero
 					#que no fue usado antes. Depende de si igual hay que guardar todo aunq no se haya usado antes	
 	addi $sp,$sp,4			#Recuperando para salir del jal Init
 	lw $ra,0($sp)
 	jr $ra
+	
 #USAR UNA MACRO PARA IMPRIMIR COMENTARIOS?
 CargarNombres:
 	sw $ra,0($sp)
@@ -157,8 +188,8 @@ CargarFichas:
 	jr $ra
 
 
-Shuffle:
-	
+Shuffle:			#ESTA INEFICIENTE POR TRANSFORMAR a $a3 y $a0 en direcciones y luego en posiciones del arreglo Fichas
+				#colocar todo en funcion de direcciones	
 	add $a1,$zero,$a3		
 	addi $v0,$zero,42		#Se halla un numero random entre 0 y 28
 	addi $a0,$a0,0
@@ -179,6 +210,25 @@ Shuffle:
 	bnez $a3,Shuffle		#El shuffle termina cuando se ha terminado de recorrer todo el arreglo
 	jr $ra
 	
+RepartirFichas: #Si se va a usar RepartirFichas en todas las rondas se estaria haciendo de mas el asignar el apuntador al inicio del
+# segmento de fichas de cada jugador. Se puede separar esa parte y dejar que esta funcion solo actualice los apuntadores de los topes
+
+	la $a1,FichasJugadores		#Guarda los dos apuntadores de cada jugador en el espacio de memoria reservado para c/u
+	sw $a0,4($a1)			#El segundo apuntador siempre estara al comienzo del segmento de fichas que le corresponde
+	addi $a0,$a0,14			#al jugador en el arreglo Fichas, el primero estara en el tope de las fichas actuales
+	sw $a0,0($a1)			#si se juega una ficha, se intercambia la ficha que esta en el tope-2 con la ficha jugada
+	sw $a0,12($a1)			#y se le resta 2 al apuntador del tope
+	addi $a0,$a0,14			#la ronda termina cuando el apuntador del comienzo de las fichas de un jugador
+	sw $a0,8($a1)			#es igual al apuntador del tope.
+	sw $a0,20($a1)			#QUITAR APUNTADOR DEL INICIO DE LAS FICHAS DE CADA JUGADOR Y REDUCIR .WORD DE FichasJugadores??
+	addi $a0,$a0,14
+	sw $a0,16($a1)
+	sw $a0,28($a1)
+	addi $a0,$a0,14
+	sw $a0,24($a1)
+	jr $ra
+	
+	
 BuscarDoble6:				#CICLO
 	lh $a2,0($a0)
 	li $a3,13878			#Guardando el valor del doble 6 para poder buscarlo
@@ -187,8 +237,7 @@ BuscarDoble6:				#CICLO
 	bne $a0,$a1,BuscarDoble6
 	
 Encontrado:				#IF
-	
-					#En a1 esta el fin de la lista de fichas, le resta 42 y pregunta si la direccion donde encontro
+	add $s0,$zero,$a0				#En a1 esta el fin de la lista de fichas, le resta 42 y pregunta si la direccion donde encontro
 	addi $a1,$a1,-42		#el doble 6 es menor que la direccion donde terminan las fichas del jugador 1. Si es menor
 	blt $a0,$a1,SaleJ1		#entonces retorna 1, indicando que comienza el jugador 1, si no suma 14 y pregunta si 
 	addi $a1,$a1,14			#la direccion del doble 6 es menor que la dir donde terminan las fichas de j2, si es menor
@@ -199,26 +248,36 @@ Encontrado:				#IF
 	blt $a0,$a1,SaleJ4			
 	
 SaleJ1:
-	addi $s0,$zero,1
+	addi $t4,$zero,1
 	jr $ra
 SaleJ2:
-	addi $s0,$zero,2
+	addi $t4,$zero,2
 	jr $ra
 SaleJ3:
-	addi $s0,$zero,3
+	addi $t4,$zero,3
 	jr $ra
 SaleJ4:
-	addi $s0,$zero,4
+	addi $t4,$zero,4
 	jr $ra
 	
 	
-
-
-
-
+SalirPrimero: #En $a0 esta la ficha que se desea colocar
 	
+	#Intercambiando la ficha que esta en el tope del segmento de fichas de J1 con la cochina y bajando el apuntador del tope
+	move $a2,$t4		#Colocando el turno (1,2,3,4) en $t4 
+	addi $a2,$a2,-1		#Se le resta 1 para que pueda indicar la posicion del arreglo de apuntadores a las fichas de los jugad
+	sll $a2,$a2,3		#se multiplica x 8 y da el numero de bytes que hay que desplazarse desde el comienzo del arreglo 
+				#FichasJugadores para encontrar el apuntador del tope de la pila de fichas del jugador con el turno
+				#si se quitan los apuntadores al inicio de los arreglos de fichas hay que colocar 2 en vez de 3
+	addi $a2,$a2,$t2	#$t2 es un apuntador al tope del arreglo de fichas del jugador que jugo la pieza
+	addi $a2,$a2,-2		#Se baja el apuntador a la ficha anterior para indicar que hay una ficha menos
+	lw $a3,0($a2)		#se intercambian las fichas del tope con la ficha que se desea sacar del arreglo
+	sw $a0,0($a2)
+	sw $a3,0($a1)
+	sw $a0,0($t7)
+	sw $
 	
-	
+	jr $ra
 	
 	
 	
