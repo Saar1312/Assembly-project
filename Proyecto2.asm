@@ -78,14 +78,17 @@ Ciclo1:
 Ciclo2:
 
 	jal MensajesPantalla
-	move $a1,$s6 
+	move $a1,$s7
+	addi $a1,$a1,-1
 	jal ImprimirTablero
 	############# Parametros ImprimirFichas
 	move $a1,$t4  #$a1 esta parado en la ultima ficha del jugador actual
+	addi $a1,$a1,-1
 	sll $a1,$a1,3 #$a2 esta parado en la primera ficha
 	add $a1,$a1,$t2
 	lw $a1,0($a1)
 	move $a2,$t4
+	addi $a2,$a2,-1
 	mul $a2,$a2,14
 	add $a2,$a2,$t3
 	#############
@@ -109,7 +112,7 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	addi $t8,$zero,0		#Contador de turnos pasados
 	la $s6,Tablero			#Direccion de un extremo del tablero 
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero 
-		
+	la $v1,Tablero			#QUITAR ESTA BASURA
 	#Colocar aqui mensajes de bienvenida y eso
 	#jal ComienzoPrograma
 	sw $ra,0($sp)
@@ -439,6 +442,7 @@ HacerJugada:
 	addi $v0,$zero,5
 	syscall
 	move $a2,$v0
+	beqz $v0,PasarTurno
 	addi $a2,$a2,-1
 	sll $a2,$a2,1
 	move $a3,$t4
@@ -507,10 +511,12 @@ AgregarDer2:				#FALTAAAAA DESCRIBIR COMO FUNCIONA LA ESTRUCTURA DE LA LISTA ENL
 	
 AgregarIzq1:
 	sb $t1,1($t7)
-	sb $t0,0($t7)
-	sw $t7,4($s6)			#
-	sw $s6,8($t7)
-	move $s7,$t7
+	sb $t0,0($t7)			
+	move $s3,$s7
+	addi $s3,$s3,-1
+	sw $t7,4($s3)			
+	sw $s3,8($t7)
+	move $s7,$t7	
 	addi $sp,$sp,-20
 	sw $a0,0($sp)
 	sw $a1,4($sp)
@@ -531,9 +537,11 @@ AgregarIzq1:
 	
 AgregarIzq2:
 	sb $t0,1($t7)
-	sb $t1,0($t7)
-	sw $t7,4($s6)			#
-	sw $s6,8($t7)
+	sb $t1,0($t7)		
+	move $s3,$s7
+	addi $s3,$s3,-1
+	sw $t7,4($s3)			
+	sw $s3,8($t7)
 	move $s7,$t7			#Actualizando borde izquierdo
 	addi $sp,$sp,-20
 	sw $a0,0($sp)
@@ -563,10 +571,11 @@ Desempilar:
 	add $a0,$a0,$a1
 	lw $t0,0($a0)
 	addi $t0,$t0,-2
-	lh $a2,0($t0)
-	sh $a3,0($t0)
-	sh $a2,0($a3)
-	sw $t0,0($a0) 		#Actualiza el apuntador al tope de la pila del jugador actual
+	lh $a1,($a3)
+	lh $a2,($t0)
+	sh $a2,($a3)
+	sh $a1,($t0)
+	sw $t0,($a0) 		#Actualiza el apuntador al tope de la pila del jugador actual
 	jr $ra
 	
 	
@@ -600,7 +609,7 @@ ReiniciarValores:
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero
 	jr $ra
 	
-	
+
 VerFinJuego:
 
 	bgt $t5,99,FinalizarJuego
@@ -608,8 +617,12 @@ VerFinJuego:
 	jr $ra
 
 FinalizarJuego:
-	
+	#Mostrar puntajes
 	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
 	#Si $v0 es 0, cerrar programa con syscall
 	#Si $v0 es 1,saltar a Init con j
 	
+PasarTurno:
+	addi $t4,$t4,1
+	beq $t4,4,FinalizarJuego
+	j Ciclo2
