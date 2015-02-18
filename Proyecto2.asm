@@ -3,18 +3,18 @@
 #HAY ETIQUETAS QUE SE PUEDEN REDUCIR COLOCANDOLAS EN ARREGLOS 
 #PUEDE PONERSE UN SOLO ALIGN AL FINAL DE CARGAR TODOS LOS .ASCIIZ O SE PUEDE ALINEAR CADA MENSAJE PARA QUE EMPIECEN PALABRAS DISTINTAS
 
-Path:    .asciiz "PIEDRAS.txt"
-SaltoLinea: .asciiz "\n"
-SaltosLinea: .asciiz "\n\n\n\n\n"
-Mensaje1:.asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
-MensajeLoadError: .ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
-MensajePuntos: .asciiz "Puntajes: "
-MensajeEquipo1: .asciiz "Equipo 1: "
-MensajeEquipo2: .asciiz "    Equipo 2: "
-MensajeTurno: .asciiz "        Turno actual: "
-SeleccionFicha: .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha (comenzando por 1) e ingrese el numero de la que desee jugar\n"
-SeleccionFicha2: .asciiz "(Si desea pasar el turno ingrese 0) "
-MensajeTablero: .asciiz "\nTablero\n"
+Path:   	 .asciiz "PIEDRAS.txt"
+SaltoLinea: 	 .asciiz "\n"
+SaltosLinea: 	 .asciiz "\n\n\n\n\n"
+Mensaje1:	 .asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
+MensajeLoadError:.ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
+MensajePuntos:   .asciiz "Puntajes: "
+MensajeEquipo1:  .asciiz "Equipo 1: "
+MensajeEquipo2:  .asciiz "    Equipo 2: "
+MensajeTurno:    .asciiz "        Turno actual: "
+SeleccionFicha:  .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha (comenzando por 1) e ingrese el numero de la que desee jugar.\n"
+SeleccionFicha2: .asciiz "(Si desea pasar el turno ingrese 0): "
+MensajeTablero:  .asciiz "\nTablero\n"
 FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, vuelva a intentarlo\n"
 
 .align 2
@@ -68,9 +68,9 @@ PuntajeE2:	.word 0
 						#En este punto $s0 contiene el jugador con la cochina
 Ciclo1:
 	jal Shuffle
-	#jal HacerJugada	#El turno ya esta implicito en $t4, retorna en $s0 la direccion de la ficha que se desea jugar para que
-				#SalirPrimer la use como parametro
-	#jal SalirPrimero
+	jal ReiniciarValores
+	jal RepartirFichas
+	jal SalirPrimero
 	
 	
 	
@@ -91,6 +91,10 @@ Ciclo2:
 	#############
 	jal ImprimirFichas
 	jal HacerJugada
+	move $a0,$t2
+	addi $a3,$a0,32
+	addi $s0,$zero,0
+	jal VerFinRonda
 	b Ciclo2
 
 
@@ -102,11 +106,9 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	addi $t5,$zero,0		#Puntos equipo1
 	addi $t6,$zero,0		#Puntos equipo2
 	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
-	addi $t8,$zero,0			#Numero de fichas tablero
-	addi $t9,$zero,0			#Ficha jugada
-	addi $s5,$zero,0
-	la $s6,Tablero			#Direccion de un extremo del tablero (solo al comienzo del juego)
-	addi $s7,$s6,1			#Direccion del otro extremo del tablero (solo al comienzo del juego)
+	addi $t8,$zero,0		#Contador de turnos pasados
+	la $s6,Tablero			#Direccion de un extremo del tablero 
+	addi $s7,$s6,1			#Direccion del otro extremo del tablero 
 		
 	#Colocar aqui mensajes de bienvenida y eso
 	#jal ComienzoPrograma
@@ -311,6 +313,7 @@ SalirPrimero: #En $a0 esta la ficha que se desea colocar
 	sh $a0,0($t0)
 	sh $a3,0($a1)
 	sh $a0,0($t7)		#Se agrega al tablero la primera ficha
+	sw $t0,0($a2)		#Actualiza el apuntador hacia el tope de la pila de fichas del jugador actual
 	addi $t4,$t4,1		#Cambia el turno
 	addi $t7,$t7,12
 	
@@ -462,6 +465,19 @@ AgregarDer1:
 	sw $t7,8($s6)		#pegado al borde derecho anterior. Ahora el borde es $t1. Luego se enlazan las fichas
 	sw $s6,4($t7)
 	move $s6,$t7		#Se coloca como borde a $t1 cambiando el apuntador $s6 (borde derecho) sobre la nueva ficha
+	addi $sp,$sp,-20
+	sw $a0,0($sp)
+	sw $a1,4($sp)
+	sw $a2,8($sp)
+	sw $t0,12($sp)
+	sw $ra,16($sp)
+	jal Desempilar
+	lw $a0,0($sp)
+	lw $a1,4($sp)
+	lw $a2,8($sp)
+	lw $t0,12($sp)
+	lw $ra,16($sp)
+	addi $sp,$sp,20
 	addi $t7,$t7,12		#Se mueve $t7 a la proxima ficha vacia
 	addi $t4,$t4,1		#Se cambia el turno
 	jr $ra
@@ -472,6 +488,19 @@ AgregarDer2:				#FALTAAAAA DESCRIBIR COMO FUNCIONA LA ESTRUCTURA DE LA LISTA ENL
 	sw $t7,8($s6)			#
 	sw $s6,4($t7)
 	move $s6,$t7
+	addi $sp,$sp,-20
+	sw $a0,0($sp)
+	sw $a1,4($sp)
+	sw $a2,8($sp)
+	sw $t0,12($sp)
+	sw $ra,16($sp)
+	jal Desempilar
+	lw $a0,0($sp)
+	lw $a1,4($sp)
+	lw $a2,8($sp)
+	lw $t0,12($sp)
+	lw $ra,16($sp)
+	addi $sp,$sp,20
 	addi $t7,$t7,12
 	addi $t4,$t4,1
 	jr $ra
@@ -482,7 +511,20 @@ AgregarIzq1:
 	sw $t7,4($s6)			#
 	sw $s6,8($t7)
 	move $s7,$t7
-	addi $s7,$s7,1
+	addi $sp,$sp,-20
+	sw $a0,0($sp)
+	sw $a1,4($sp)
+	sw $a2,8($sp)
+	sw $t0,12($sp)
+	sw $ra,16($sp)
+	jal Desempilar
+	lw $a0,0($sp)
+	lw $a1,4($sp)
+	lw $a2,8($sp)
+	lw $t0,12($sp)
+	lw $ra,16($sp)
+	addi $sp,$sp,20
+	addi $s7,$s7,1			#Le suma uno para que apunte al valor de la ficha que estara en el borde izquierdo
 	addi $t7,$t7,12
 	addi $t4,$t4,1
 	jr $ra
@@ -493,8 +535,81 @@ AgregarIzq2:
 	sw $t7,4($s6)			#
 	sw $s6,8($t7)
 	move $s7,$t7			#Actualizando borde izquierdo
+	addi $sp,$sp,-20
+	sw $a0,0($sp)
+	sw $a1,4($sp)
+	sw $a2,8($sp)
+	sw $t0,12($sp)
+	sw $ra,16($sp)
+	jal Desempilar
+	lw $a0,0($sp)
+	lw $a1,4($sp)
+	lw $a2,8($sp)
+	lw $t0,12($sp)
+	lw $ra,16($sp)
+	addi $sp,$sp,20
 	addi $s7,$s7,1
 	addi $t7,$t7,12
 	addi $t4,$t4,1
 	jr $ra
+	
+
+Desempilar:
+		 
+	move $a0,$t2
+	move $a1,$t4
+	addi $a1,$a1,-1
+	sll $a1,$a1,3
+	add $a0,$a0,$a1
+	lw $t0,0($a0)
+	addi $t0,$t0,-2
+	lh $a2,0($t0)
+	sh $a3,0($t0)
+	sh $a2,0($a3)
+	sw $t0,0($a0) 		#Actualiza el apuntador al tope de la pila del jugador actual
+	jr $ra
+	
+	
+VerFinRonda:
+
+	lw $a1,0($a0)
+	lw $a2,4($a0)
+	addi $a0,$a0,8
+	beq $t8,4,FinRonda
+	beq $a0,$3,FinRonda
+	bne $a0,$a3,VerFinRonda
+	jr $ra
+	
+FinRonda:		#REVISAR USO DEL $sp
+	sw $ra,0($sp)
+	addi $sp,$sp,-4
+	jal VerFinJuego
+	addi $sp,$sp,4
+	lw $ra,0($sp)
+	j Ciclo1
+	
+	
+ReiniciarValores:
+
+	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
+	la $t3,Fichas			#Comienzo del arreglo con las Fichas
+	addi $t4,$zero,0		#Turno (1,2,3,4)
+	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
+	addi $t8,$zero,0		#Contador de turnos pasados
+	la $s6,Tablero			#Direccion de un extremo del tablero 
+	addi $s7,$s6,1			#Direccion del otro extremo del tablero
+	jr $ra
+	
+	
+VerFinJuego:
+
+	bgt $t5,99,FinalizarJuego
+	bgt $t6,99,FinalizarJuego
+	jr $ra
+
+FinalizarJuego:
+	
+	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
+	#Si $v0 es 0, cerrar programa con syscall
+	#Si $v0 es 1,saltar a Init con j
 	
