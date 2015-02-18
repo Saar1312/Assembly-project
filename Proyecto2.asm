@@ -5,10 +5,19 @@
 
 Path:    .asciiz "PIEDRAS.txt"
 SaltoLinea: .asciiz "\n"
-Mensaje1:.asciiz "Por favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
+SaltosLinea: .asciiz "\n\n\n\n\n"
+Mensaje1:.asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
 MensajeLoadError: .ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
-ImpresionNumero: .space 4
+MensajePuntos: .asciiz "Puntajes: "
+MensajeEquipo1: .asciiz "Equipo 1: "
+MensajeEquipo2: .asciiz "    Equipo 2: "
+MensajeTurno: .asciiz "        Turno actual: "
+SeleccionFicha: .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha e ingrese el numero correspondiente a la que desee jugar (Si desea pasar el turno ingrese 0)\n"
+MensajeTablero: .asciiz "\nTablero\n"
 
+.align 2
+
+ImpresionNumero: .space 4
 NombreJ1: .space 20
 NombreJ2: .space 20
 NombreJ3: .space 20
@@ -16,7 +25,7 @@ NombreJ4: .space 20
 
 Archivo: .space 140	#Se requieren de 5 bytes por ficha para leer las 28 fichas con el formato (1,2)
 Fichas:  .space 56      #Para sacar las fichas del formato de entrada (sin "(", ")", ",")
-.align 2
+
 
 Tablero: .space 336	#Para que cada ficha del tablero tenga una palabra para los dos numeros de la ficha y dos palabras para los
 			#apuntadores a la siguiente ficha y a la anterior (esto para poder imprimir el tablero mas facil)
@@ -36,13 +45,13 @@ FichasJugadores: .space 32	#Cada jugador tendra dos apuntadores a sus fichas en 
 #FichasJ4:.space 4
 
 #NumFichasTablero: .byte 0,0,0,0,0,0,0 #Arreglo con el numero REDUCIR CON EL ARREGLO PORQUE SON MUCHAS ETIQUETAS
-FichasCero:	.word 7 #Contador del numero de fichas que quedan en manos de los jugadores con el numero 1
-FichasUno:      .word 7	#Sirven para determinar si el juego se tranco, buscando las fichas que estan en los bordes de mesa
-FichasDos:	.word 7 #Y viendo si el numero de estas fichas que quedan en las manos de los jugadores es igual a cero
-FichasTres:	.word 7
-FichasCuatro:	.word 7
-FichasCinco:	.word 7
-FichasSeis:	.word 7
+#FichasCero:	.word 7 #Contador del numero de fichas que quedan en manos de los jugadores con el numero 1
+#FichasUno:      .word 7	#Sirven para determinar si el juego se tranco, buscando las fichas que estan en los bordes de mesa
+#FichasDos:	.word 7 #Y viendo si el numero de estas fichas que quedan en las manos de los jugadores es igual a cero
+#FichasTres:	.word 7
+#FichasCuatro:	.word 7
+#FichasCinco:	.word 7
+#FichasSeis:	.word 7
 
 TurnoActual:	.word 0 #Indica quien tiene el turno actual (va del 1 al 4)
 
@@ -51,7 +60,7 @@ PuntajeE2:	.word 0
 
 
 	.text
-	
+	jal LimpiarPantalla
 	jal Init
 	b Ciclo2			#Se podria poner a Init como una etiqueta y no como funcion y se salta a Ciclo2 dentro de ella
 						#En este punto $s0 contiene el jugador con la cochina
@@ -65,11 +74,20 @@ Ciclo1:
 	
 	
 Ciclo2:
+
+	jal MensajesPantalla
 	move $a1,$s6 
 	jal ImprimirTablero
-	
-	
-	#jal ImprimirFichas
+	############# Parametros ImprimirFichas
+	move $a1,$t4  #$a1 esta parado en la ultima ficha del jugador actual
+	sll $a1,$a1,3 #$a2 esta parado en la primera ficha
+	add $a1,$a1,$t2
+	lw $a1,0($a1)
+	move $a2,$t4
+	mul $a2,$a2,14
+	add $a2,$a2,$t3
+	#############
+	jal ImprimirFichas
 
 
 
@@ -78,12 +96,13 @@ Ciclo2:
 Init:	#Variables que seran globales durante todo el programa para no accesar tanto a memoria, se pueden quitar y pasar como parametros
 	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
 	la $t3,Fichas			#Comienzo del arreglo con las Fichas
-	li $t4,0			#Turno (1,2,3,4)
-	li $t5,0			#Puntos equipo1
-	li $t6,0			#Puntos equipo2
+	addi $t4,$zero,0		#Turno (1,2,3,4)
+	addi $t5,$zero,0		#Puntos equipo1
+	addi $t6,$zero,0		#Puntos equipo2
 	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
-	li $t8,0			#Numero de fichas tablero
-	li $t9,0			#Ficha jugada
+	addi $t8,$zero,0			#Numero de fichas tablero
+	addi $t9,$zero,0			#Ficha jugada
+	addi $s5,$zero,0
 	la $s6,Tablero			#Direccion de un extremo del tablero (solo al comienzo del juego)
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero (solo al comienzo del juego)
 		
@@ -91,7 +110,7 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	#jal ComienzoPrograma
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
-	#jal CargarNombres
+	jal CargarNombres
 	jal CargarArchivo  #Abre el archivo,lee su contenido y lo guarda en Archivo
 	la $a0,Archivo
 	la $a1,Fichas
@@ -325,9 +344,86 @@ ImprimirTablero:
 	syscall
 	lw $a1,4($a1)		#Salta a la siguiente ficha del tablero
 	bnez $a1,ImprimirTablero
+	la $a0,SaltoLinea
+	syscall
 	jr $ra
 	
 	
+MensajesPantalla:
+
+	la $a0,MensajePuntos
+	addi $v0,$zero,4
+	syscall
+	la $a0,MensajeEquipo1
+	addi $v0,$zero,4
+	syscall
+	move $a0,$t5
+	addi $v0,$zero,1
+	syscall
+	la $a0,MensajeEquipo2
+	addi $v0,$zero,4
+	syscall
+	move $a0,$t6
+	addi $v0,$zero,1
+	syscall
+	la $a0,MensajeTurno
+	addi $v0,$zero,4
+	syscall
+	beq $t4,1,ImprimirJ1
+	beq $t4,2,ImprimirJ2
+	beq $t4,3,ImprimirJ3
+	beq $t4,4,ImprimirJ4
 	
+ImprimirJ1:
+	la $a0,NombreJ1
+	addi $v0,$zero,4
+	syscall
+	jr $ra
 	
+ImprimirJ2:
+	la $a0,NombreJ2
+	addi $v0,$zero,4
+	syscall
+	jr $ra
 	
+ImprimirJ3:
+	la $a0,NombreJ3
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+	
+ImprimirJ4:
+	la $a0,NombreJ4
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+
+ImprimirFichas:
+	lb $a3,0($a2)
+	sll $a3,$a3,8
+	addi $a3,$a3,40
+	sw $a3,ImpresionNumero
+	la $a0,ImpresionNumero
+	addi $v0,$zero,4
+	syscall
+	lb $a3,1($a2)
+	sll $a3,$a3,8
+	addi $a3,$a3,44
+	sw $a3,ImpresionNumero
+	la $a0,ImpresionNumero
+	syscall
+	addi $a0,$zero,41
+	sw $a0,ImpresionNumero
+	la $a0,ImpresionNumero		#No se coloca addi $v0,$zero,4 porque ya lo tiene de arriba
+	syscall
+	addi $a1,$a1,2
+	bne $a1,$a2,ImprimirFichas
+	la $a0,SeleccionFicha
+	syscall
+	jr $ra
+	
+LimpiarPantalla:
+	la $a0,SaltosLinea
+	addi $v0,$zero,4
+	syscall
+	jr $ra
