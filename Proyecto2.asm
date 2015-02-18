@@ -1,3 +1,14 @@
+#CAMBIAR DE LAS FUNCIONES QUE USAN $T0 POR $S0.
+#DISTRIBUIR MEJOR LAS VARIABLES GLOBALES ENTRE $T5-$T9 Y $S3-$S7 (DEJAR A $S6 Y $S7 COMO ESTAN) (las variables globales estan en las primeras 10 lineas de Init)
+#QUITAR $V0 
+#CAMBIAR FUNCIONES QUE RETORNEN $S0 POR $V0	
+#COLOCAR CONVENCION DE RETORNAR LAS COSAS EN $S0...$S2
+#REVISAR LAMINAS DE CONVENCION COMPARTIDA EN EL MOODLE
+#APLICAR LA CONVENCION (empilar) A TODOS LOS REGISTROS QUE DIGA LA RESPONSABILIDAD COMPARTIDA AUNQUE NO SE VAYAN A USAR?
+#HACER DESCRIPCION DE CADA FUNCION,PARAMETROS QUE USA Y REGISTROS EN LOS QUE DEVUELVE LAS COSAS
+#MENSAJE DE INICIO Y FINALIZACION (imprimir puntos)
+			
+				
 	.data 
 
 #HAY ETIQUETAS QUE SE PUEDEN REDUCIR COLOCANDOLAS EN ARREGLOS 
@@ -7,15 +18,15 @@ Path:   	 .asciiz "PIEDRAS.txt"
 SaltoLinea: 	 .asciiz "\n"
 SaltosLinea: 	 .asciiz "\n\n\n\n\n"
 Mensaje1:	 .asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
-MensajeLoadError:.ascii "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
+MensajeLoadError:.asciiz "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
 MensajePuntos:   .asciiz "Puntajes: "
-MensajeEquipo1:  .asciiz "Equipo 1: "
-MensajeEquipo2:  .asciiz "    Equipo 2: "
-MensajeTurno:    .asciiz "        Turno actual: "
-SeleccionFicha:  .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha (comenzando por 1) e ingrese el numero de la que desee jugar.\n"
+MensajeEquipo1:  .asciiz "Equipo 1:"
+MensajeEquipo2:  .asciiz " Equipo 2:"
+MensajeTurno:    .asciiz " Turno actual: "
+SeleccionFicha:  .asciiz "\nEnumerar las fichas de izquierda a derecha e introduzca el numero de la que desee jugar. "
 SeleccionFicha2: .asciiz "(Si desea pasar el turno ingrese 0): "
 MensajeTablero:  .asciiz "\nTablero\n"
-FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, vuelva a intentarlo\n"
+FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, por favor vuelva a intentarlo. "
 
 .align 2
 
@@ -82,7 +93,7 @@ Ciclo2:
 	addi $a1,$a1,-1
 	jal ImprimirTablero
 	############# Parametros ImprimirFichas
-	move $a1,$t4  #$a1 esta parado en la ultima ficha del jugador actual
+	move $a1,$t4  #$a1 va a estar parado en la ultima ficha del jugador actual
 	addi $a1,$a1,-1
 	sll $a1,$a1,3 #$a2 esta parado en la primera ficha
 	add $a1,$a1,$t2
@@ -443,6 +454,7 @@ HacerJugada:
 	syscall
 	move $a2,$v0
 	beqz $v0,PasarTurno
+	addi $v0,$zero,0		#Reiniciando el contador de pasadas de turno porque hay que contar las pasadas de turno consecutivas
 	addi $a2,$a2,-1
 	sll $a2,$a2,1
 	move $a3,$t4
@@ -484,6 +496,7 @@ AgregarDer1:
 	addi $sp,$sp,20
 	addi $t7,$t7,12		#Se mueve $t7 a la proxima ficha vacia
 	addi $t4,$t4,1		#Se cambia el turno
+	beq $t4,5,ReiniciarTurno
 	jr $ra
 	
 AgregarDer2:				#FALTAAAAA DESCRIBIR COMO FUNCIONA LA ESTRUCTURA DE LA LISTA ENLAZADA DEL TABLERO
@@ -507,6 +520,7 @@ AgregarDer2:				#FALTAAAAA DESCRIBIR COMO FUNCIONA LA ESTRUCTURA DE LA LISTA ENL
 	addi $sp,$sp,20
 	addi $t7,$t7,12
 	addi $t4,$t4,1
+	beq $t4,5,ReiniciarTurno
 	jr $ra
 	
 AgregarIzq1:
@@ -533,13 +547,14 @@ AgregarIzq1:
 	addi $s7,$s7,1			#Le suma uno para que apunte al valor de la ficha que estara en el borde izquierdo
 	addi $t7,$t7,12
 	addi $t4,$t4,1
+	beq $t4,5,ReiniciarTurno
 	jr $ra
 	
 AgregarIzq2:
 	sb $t0,1($t7)
 	sb $t1,0($t7)		
 	move $s3,$s7
-	addi $s3,$s3,-1
+	addi $s3,$s3,-1			#El $s3 no va, cambiar por otro registro o usarlo pero guardando su valor 
 	sw $t7,4($s3)			
 	sw $s3,8($t7)
 	move $s7,$t7			#Actualizando borde izquierdo
@@ -559,6 +574,7 @@ AgregarIzq2:
 	addi $s7,$s7,1
 	addi $t7,$t7,12
 	addi $t4,$t4,1
+	beq $t4,5,ReiniciarTurno
 	jr $ra
 	
 
@@ -589,7 +605,7 @@ VerFinRonda:
 	bne $a0,$a3,VerFinRonda
 	jr $ra
 	
-FinRonda:		#REVISAR USO DEL $sp
+FinRonda:		#REVISAR USO DEL $sp FALTA SUMAR PUNTOS A CADA EQUIPO AL TERMINAR LA RONDA hacer mascara a cada valor de cada ficha
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
 	jal VerFinJuego
@@ -608,7 +624,7 @@ ReiniciarValores:
 	la $s6,Tablero			#Direccion de un extremo del tablero 
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero
 	jr $ra
-	
+
 
 VerFinJuego:
 
@@ -621,8 +637,15 @@ FinalizarJuego:
 	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
 	#Si $v0 es 0, cerrar programa con syscall
 	#Si $v0 es 1,saltar a Init con j
-	
+
 PasarTurno:
 	addi $t4,$t4,1
-	beq $t4,4,FinalizarJuego
+	addi $t8,$t8,1
+	beq $t8,4,FinRonda
+	beq $t4,5,ReiniciarTurno
 	j Ciclo2
+
+ReiniciarTurno:
+	addi $t4,$zero,1
+	b Ciclo2
+	
