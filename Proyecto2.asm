@@ -12,8 +12,10 @@ MensajePuntos: .asciiz "Puntajes: "
 MensajeEquipo1: .asciiz "Equipo 1: "
 MensajeEquipo2: .asciiz "    Equipo 2: "
 MensajeTurno: .asciiz "        Turno actual: "
-SeleccionFicha: .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha e ingrese el numero correspondiente a la que desee jugar (Si desea pasar el turno ingrese 0)\n"
+SeleccionFicha: .asciiz "\nPara seleccionar una ficha, enumerelas de izquierda a derecha (comenzando por 1) e ingrese el numero de la que desee jugar\n"
+SeleccionFicha2: .asciiz "(Si desea pasar el turno ingrese 0) "
 MensajeTablero: .asciiz "\nTablero\n"
+FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, vuelva a intentarlo\n"
 
 .align 2
 
@@ -88,8 +90,8 @@ Ciclo2:
 	add $a2,$a2,$t3
 	#############
 	jal ImprimirFichas
-
-
+	jal HacerJugada
+	b Ciclo2
 
 
 
@@ -118,7 +120,7 @@ Init:	#Variables que seran globales durante todo el programa para no accesar tan
 	addi $a2,$a2,56
 	jal CargarFichas   #Separa las fichas de los caracteres como ",()" y los coloca en un arreglo
 	
-	#jal CargarNombres
+
 	
 	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
 	add $a3,$zero,27 		#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
@@ -310,7 +312,7 @@ SalirPrimero: #En $a0 esta la ficha que se desea colocar
 	sh $a3,0($a1)
 	sh $a0,0($t7)		#Se agrega al tablero la primera ficha
 	addi $t4,$t4,1		#Cambia el turno
-	
+	addi $t7,$t7,12
 	
 	#sw $ra,0($sp)
 	#addi $sp,$sp,-4
@@ -342,7 +344,7 @@ ImprimirTablero:
 	sw $a0,ImpresionNumero
 	la $a0,ImpresionNumero		#No se coloca addi $v0,$zero,4 porque ya lo tiene de arriba
 	syscall
-	lw $a1,4($a1)		#Salta a la siguiente ficha del tablero
+	lw $a1,8($a1)		#Salta a la siguiente ficha del tablero
 	bnez $a1,ImprimirTablero
 	la $a0,SaltoLinea
 	syscall
@@ -416,9 +418,11 @@ ImprimirFichas:
 	sw $a0,ImpresionNumero
 	la $a0,ImpresionNumero		#No se coloca addi $v0,$zero,4 porque ya lo tiene de arriba
 	syscall
-	addi $a1,$a1,2
+	addi $a2,$a2,2
 	bne $a1,$a2,ImprimirFichas
 	la $a0,SeleccionFicha
+	syscall
+	la $a0,SeleccionFicha2
 	syscall
 	jr $ra
 	
@@ -427,3 +431,70 @@ LimpiarPantalla:
 	addi $v0,$zero,4
 	syscall
 	jr $ra
+
+HacerJugada:
+	addi $v0,$zero,5
+	syscall
+	move $a2,$v0
+	addi $a2,$a2,-1
+	sll $a2,$a2,1
+	move $a3,$t4
+	addi $a3,$a3,-1
+	mul $a3,$a3,14
+	add $a3,$a3,$a2
+	add $a3,$a3,$t3
+	lb $t0,0($a3)			#
+	lb $t1,1($a3)
+	lb $a0,0($s6)			#$a0 borde derecho
+	lb $a1,0($s7)			#$a1 borde izquierdo
+	beq $t0,$a0,AgregarDer1		#Valor derecho de la ficha es igual al borde derecho del tablero
+	beq $t0,$a1,AgregarIzq1		#Valor derecho de la ficha es igual al borde izquierdo del tablero
+	beq $t1,$a0,AgregarDer2		#Valor izquierdo de la ficha es igual al borde derecho del tablero
+	beq $t1,$a1,AgregarIzq2		#Valor izquierdo de la ficha es igual al borde izquierdo del tablero
+	la $a0,FichaIncorrecta
+	addi $v0,$zero,4
+	syscall
+	j Ciclo2
+	
+AgregarDer1:
+	sb $t0,1($t7)		#Se inserta la ficha en el tablero ($t7 posee la primera direccion libre luego de la ultima ficha agregada
+	sb $t1,0($t7)		#Como $t0 es igual al borde derecho del tablero, el valor de $t0 se coloca a la izquierda y asi queda
+	sw $t7,8($s6)		#pegado al borde derecho anterior. Ahora el borde es $t1. Luego se enlazan las fichas
+	sw $s6,4($t7)
+	move $s6,$t7		#Se coloca como borde a $t1 cambiando el apuntador $s6 (borde derecho) sobre la nueva ficha
+	addi $t7,$t7,12		#Se mueve $t7 a la proxima ficha vacia
+	addi $t4,$t4,1		#Se cambia el turno
+	jr $ra
+	
+AgregarDer2:				#FALTAAAAA DESCRIBIR COMO FUNCIONA LA ESTRUCTURA DE LA LISTA ENLAZADA DEL TABLERO
+	sb $t1,1($t7)
+	sb $t0,0($t7)
+	sw $t7,8($s6)			#
+	sw $s6,4($t7)
+	move $s6,$t7
+	addi $t7,$t7,12
+	addi $t4,$t4,1
+	jr $ra
+	
+AgregarIzq1:
+	sb $t1,1($t7)
+	sb $t0,0($t7)
+	sw $t7,4($s6)			#
+	sw $s6,8($t7)
+	move $s7,$t7
+	addi $s7,$s7,1
+	addi $t7,$t7,12
+	addi $t4,$t4,1
+	jr $ra
+	
+AgregarIzq2:
+	sb $t0,1($t7)
+	sb $t1,0($t7)
+	sw $t7,4($s6)			#
+	sw $s6,8($t7)
+	move $s7,$t7			#Actualizando borde izquierdo
+	addi $s7,$s7,1
+	addi $t7,$t7,12
+	addi $t4,$t4,1
+	jr $ra
+	
