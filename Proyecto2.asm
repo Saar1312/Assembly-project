@@ -7,6 +7,8 @@
 #APLICAR LA CONVENCION (empilar) A TODOS LOS REGISTROS QUE DIGA LA RESPONSABILIDAD COMPARTIDA AUNQUE NO SE VAYAN A USAR?
 #HACER DESCRIPCION DE CADA FUNCION,PARAMETROS QUE USA Y REGISTROS EN LOS QUE DEVUELVE LAS COSAS
 #MENSAJE DE INICIO Y FINALIZACION (imprimir puntos)
+#AGREGAR AL LADO DEL NOMBRE DEL JUGADOR E1 SI ES DEL EQUIPO 1 Y E2..
+#FALTA LA MARPARIDA BASURA DE LA CHANCLETA Y EL ZAPATO
 			
 				
 	.data 
@@ -19,7 +21,7 @@ SaltoLinea: 	 .asciiz "\n"
 SaltosLinea: 	 .asciiz "\n\n\n\n\n"
 Mensaje1:	 .asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
 MensajeLoadError:.asciiz "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
-MensajePuntos:   .asciiz "Puntajes: "
+MensajePuntos:   .asciiz "Puntos: "
 MensajeEquipo1:  .asciiz "Equipo 1:"
 MensajeEquipo2:  .asciiz " Equipo 2:"
 MensajeTurno:    .asciiz " Turno actual: "
@@ -27,6 +29,8 @@ SeleccionFicha:  .asciiz "\nEnumerar las fichas de izquierda a derecha e introdu
 SeleccionFicha2: .asciiz "(Si desea pasar el turno ingrese 0): "
 MensajeTablero:  .asciiz "\nTablero\n"
 FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, por favor vuelva a intentarlo. "
+Equipo1: 	 .asciiz "(E1) "
+Equipo2: 	 .asciiz "(E2) "
 
 .align 2
 
@@ -107,8 +111,13 @@ Ciclo2:
 	jal HacerJugada
 	move $a0,$t2
 	addi $a3,$a0,32
-	addi $s0,$zero,0
-	jal VerFinRonda
+	#addi $s0,$zero,0
+	sw $ra,0($sp)
+	addi $sp,$sp,-4
+	jal TurnoAnterior 	#Se necesita restarle 1 a $t4 y retornarlo en $v0, pero si $t4 = 1 el turno anterior es 4, por esto se usa la funcion
+	move $s0,$v0		#Como el $t4 ya se aumento al hacer la jugada hay que restarle 1 a $s0 para que represente el turno durante el cual se realizo la jugada
+	jal RevisarFinRonda		
+	jal RevisarFinJuego
 	b Ciclo2
 
 
@@ -394,26 +403,34 @@ MensajesPantalla:
 	beq $t4,4,ImprimirJ4
 	
 ImprimirJ1:
-	la $a0,NombreJ1
+	la $a0,Equipo1
 	addi $v0,$zero,4
+	syscall
+	la $a0,NombreJ1
 	syscall
 	jr $ra
 	
 ImprimirJ2:
-	la $a0,NombreJ2
+	la $a0,Equipo2
 	addi $v0,$zero,4
+	syscall
+	la $a0,NombreJ2
 	syscall
 	jr $ra
 	
 ImprimirJ3:
-	la $a0,NombreJ3
+	la $a0,Equipo1
 	addi $v0,$zero,4
+	syscall
+	la $a0,NombreJ3
 	syscall
 	jr $ra
 	
 ImprimirJ4:
-	la $a0,NombreJ4
+	la $a0,Equipo2
 	addi $v0,$zero,4
+	syscall
+	la $a0,NombreJ4
 	syscall
 	jr $ra
 
@@ -454,6 +471,7 @@ HacerJugada:
 	syscall
 	move $a2,$v0
 	beqz $v0,PasarTurno
+	addi $t8,$zero,0		#Si no entra en el PasarTurno, entonces hay que reiniciar $t8
 	addi $v0,$zero,0		#Reiniciando el contador de pasadas de turno porque hay que contar las pasadas de turno consecutivas
 	addi $a2,$a2,-1
 	sll $a2,$a2,1
@@ -595,25 +613,144 @@ Desempilar:
 	jr $ra
 	
 	
-VerFinRonda:
+RevisarFinRonda:
 
 	lw $a1,0($a0)
 	lw $a2,4($a0)
+	beq $a1,$a2,RondaTerminadaNormal
 	addi $a0,$a0,8
-	beq $t8,4,FinRonda
-	beq $a0,$3,FinRonda
-	bne $a0,$a3,VerFinRonda
-	jr $ra
+	bne $a0,$a3,RevisarFinRonda
+	jr $ra					#Falta retornar el jugador que se quedo sin fichas para saber que equipo fue el ganador
 	
-FinRonda:		#REVISAR USO DEL $sp FALTA SUMAR PUNTOS A CADA EQUIPO AL TERMINAR LA RONDA hacer mascara a cada valor de cada ficha
+RondaTerminadaNormal:		#REVISAR USO DEL $sp FALTA SUMAR PUNTOS A CADA EQUIPO AL TERMINAR LA RONDA hacer mascara a cada valor de cada ficha
+	beq $s0,1,GanaRondaE1
+	beq $s0,3,GanaRondaE1
+	beq $s0,2,GanaRondaE2
+	beq $s0,4,GanaRondaE2
+
+	
+GanaRondaE1:
+	addi $a0,$zero,2		#Se le pasa a la funcion los jugadores a los que se desea sumar los puntos de sus fichas
+	addi $a1,$zero,4
 	sw $ra,0($sp)
 	addi $sp,$sp,-4
-	jal VerFinJuego
+	jal SumarPuntos
 	addi $sp,$sp,4
-	lw $ra,0($sp)
-	j Ciclo1
+	lw $ra,0($sp)		
+	#La funcion debe retornar un $v0 con la suma total de los puntos de las fichas del equipo 2
+	add $t5,$t5,$v0
+	jr $ra
+	
+GanaRondaE2:
+	addi $a0,$zero,1		#Se le pasa como parametros a la funcion los jugadores a los que se desea sumar los puntos de sus fichas
+	addi $a1,$zero,3
+	sw $ra,0($sp)
+	addi $sp,$sp,-4
+	jal SumarPuntos
+	addi $sp,$sp,4
+	lw $ra,0($sp)		
+	#La funcion debe retornar un $v0 con la suma total de los puntos de las fichas del equipo 2
+	add $t6,$t6,$v0
+	jr $ra
+
+
+SumarPuntos:
+
+	addi $a0,$a0,-1
+	addi $a1,$a1,-1
+	sll $a0,$a0,3
+	sll $a1,$a1,3
+	add $a0,$a0,$t2
+	add $a1,$a1,$t2
+	lw $a2,4($a0)			#$a2 contiene la dir de inicio del primer jugador del grupo
+	lw $a3,4($a1)			#$a3 contiene la dir de inicio del segundo jugador del grupo
+	lw $a0,0($a0)			#$a0 contiene la dir del tope de la pila de fichas del jugador 1
+	lw $a1,0($a1)			#$a1 contiene la dir del tope de la pila de fichas del jugador 2
+	addi $sp,$sp,-20		#Guardando en la pila $ra y parametros de la funcion Suma $a0 y $a1
+	sw $ra,4($sp)
+	sw $a0,8($sp)
+	sw $a1,12($sp)
+	sw $a2,16($sp)
+	sw $a3,20($sp)
+	move $a1,$a0			#Guardando tope de la pila en $a1 (parametros de la funcion Suma)
+	move $a0,$a2			#Guardando inicio de la pila en $a0
+	addi $v0,$zero,0	#Por si $v0 tenia algun valor, reiniciarlo (abajo en la otra suma no se reinicia xq queremos sumar todo junto)
+	jal Suma
+	lw $ra,4($sp)
+	lw $a0,8($sp)
+	lw $a1,12($sp)
+	lw $a2,16($sp)
+	lw $a3,20($sp)
+	addi $sp,$sp,20
+	addi $sp,$sp,-20		#Guardando en la pila $ra y parametros de la funcion Suma $a0 y $a1
+	sw $ra,4($sp)
+	sw $a0,8($sp)
+	sw $a1,12($sp)
+	sw $a2,16($sp)
+	sw $a3,20($sp)
+	move $a0,$a3 			#$a1: tope, $a0 inicio ($a1 ya tenia su valor puesto)
+	jal Suma
+	lw $ra,4($sp)
+	lw $a0,8($sp)
+	lw $a1,12($sp)
+	lw $a2,16($sp)
+	lw $a3,20($sp)
+	addi $sp,$sp,20
+	jr $ra				#En este punto ya se sumaron todos los puntos y sigue en $v0 el resultado
 	
 	
+Suma:					#Colocar a $v0 a sumarse en funcion de si mismo
+	lb $a2,0($a0)			
+	addi $a2,$a2,-48		#Para convertir el Ascii en numero
+	add $v0,$v0,$a2
+	lb $a2,1($a0)
+	addi $a2,$a2,-48
+	add $v0,$v0,$a2
+	addi $a0,$a0,2
+	bne $a0,$a1,Suma
+	jr $ra
+	
+	
+
+RondaTerminadaTranca:
+	
+	lw $a0,4($t2)
+	lw $a1,0($t2)
+	jal Suma
+	move $a2,$v0
+	lw $a0,20($t2)
+	lw $a1,16($t2)
+	jal Suma
+	move $a3,$v0
+	sub $t0,$a2,$a3
+	bgezal $t0,MaxJ1
+	bltzal $t0,MaxJ3
+	lw $a0,12($t2)
+	lw $a1,8($t2)
+	jal Suma
+	move $a2,$v0
+	lw $a0,28($t2)
+	lw $a1,24($t2)
+	jal Suma
+	move $a3,$v0
+	sub $t0,$a2,$a3
+	bgezal $t0,MaxJ2
+	bltzal $t0,MaxJ4
+	j Ciclo2
+	
+MaxJ1:
+	add $t6,$t6,$a2
+
+MaxJ3:
+	add $t6,$t6,$a3
+
+MaxJ2:
+	add $t5,$t5,$a2
+
+MaxJ4:
+	add $t5,$t5,$a3
+
+
 ReiniciarValores:
 
 	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
@@ -626,8 +763,8 @@ ReiniciarValores:
 	jr $ra
 
 
-VerFinJuego:
-
+RevisarFinJuego:
+	
 	bgt $t5,99,FinalizarJuego
 	bgt $t6,99,FinalizarJuego
 	jr $ra
@@ -641,11 +778,26 @@ FinalizarJuego:
 PasarTurno:
 	addi $t4,$t4,1
 	addi $t8,$t8,1
-	beq $t8,4,FinRonda
+	beq $t8,4,RondaTerminadaTranca
 	beq $t4,5,ReiniciarTurno
 	j Ciclo2
 
 ReiniciarTurno:
 	addi $t4,$zero,1
 	b Ciclo2
+	
+TurnoAnterior:
+	beq $t4,1,Caso1
+	bne $t4,1,Caso2
+	
+Caso1:
+	addi $v0,$v0,4
+	jr $ra
+	
+Caso2:
+	move $v0,$t4
+	addi $v0,$v0,-1
+	jr $ra
+	
+	
 	
