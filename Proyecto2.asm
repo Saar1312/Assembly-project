@@ -8,7 +8,9 @@
 #HACER DESCRIPCION DE CADA FUNCION,PARAMETROS QUE USA Y REGISTROS EN LOS QUE DEVUELVE LAS COSAS
 #MENSAJE DE INICIO Y FINALIZACION (imprimir puntos)
 #AGREGAR AL LADO DEL NOMBRE DEL JUGADOR E1 SI ES DEL EQUIPO 1 Y E2..
-#FALTA LA MARPARIDA BASURA DE LA CHANCLETA Y EL ZAPATO
+#FALTA LA MARPARIDA BASURA DE LA CHANCLETA Y EL ZAPATO HACER FUNCIOOOOON PARA ESTO
+#TERMINAR ULTIMAS FUNCIONES
+
 			
 				
 	.data 
@@ -116,8 +118,12 @@ Ciclo2:
 	addi $sp,$sp,-4
 	jal TurnoAnterior 	#Se necesita restarle 1 a $t4 y retornarlo en $v0, pero si $t4 = 1 el turno anterior es 4, por esto se usa la funcion
 	move $s0,$v0		#Como el $t4 ya se aumento al hacer la jugada hay que restarle 1 a $s0 para que represente el turno durante el cual se realizo la jugada
-	jal RevisarFinRonda		
-	jal RevisarFinJuego
+	jal RevisarFinRonda
+	sw $ra,0($sp)		
+	addi $sp,$sp,-4
+	jal FinJuegoNormal
+	addi $sp,$sp,4
+	lw $ra,0($sp)
 	b Ciclo2
 
 
@@ -712,44 +718,76 @@ Suma:					#Colocar a $v0 a sumarse en funcion de si mismo
 	
 	
 
-RondaTerminadaTranca:
+FinRondaPorTranca:
 	
 	lw $a0,4($t2)
 	lw $a1,0($t2)
+	sw $a2,0($sp)
+	addi $sp,$sp,-4
+	addi $v0,$zero,0
 	jal Suma
+	addi $sp,$sp,4
+	lw $a2,0($sp)
 	move $a2,$v0
 	lw $a0,20($t2)
 	lw $a1,16($t2)
+	sw $a2,0($sp)
+	addi $sp,$sp,-4
+	addi $v0,$zero,0
 	jal Suma
+	addi $sp,$sp,4
+	lw $a2,0($sp)
 	move $a3,$v0
 	sub $t0,$a2,$a3
+	sw $ra,0($sp)
+	addi $sp,$sp,-4
 	bgezal $t0,MaxJ1
 	bltzal $t0,MaxJ3
 	lw $a0,12($t2)
 	lw $a1,8($t2)
+	sw $a2,0($sp)
+	addi $sp,$sp,-4
+	addi $v0,$zero,0
 	jal Suma
+	addi $sp,$sp,4
+	lw $a2,0($sp)
 	move $a2,$v0
 	lw $a0,28($t2)
 	lw $a1,24($t2)
+	sw $a2,0($sp)
+	addi $sp,$sp,-4
+	addi $v0,$zero,0
 	jal Suma
+	addi $sp,$sp,4
+	lw $a2,0($sp)
 	move $a3,$v0
 	sub $t0,$a2,$a3
 	bgezal $t0,MaxJ2
 	bltzal $t0,MaxJ4
-	j Ciclo2
+	addi $sp,$sp,4
+	lw $ra,0($sp)
+	sw $ra,0($sp)
+	addi $sp,$sp,-4
+	jal FinJuegoPorTranca
+	addi $sp,$sp,4
+	lw $ra,0($sp)
+	j Ciclo1
 	
 MaxJ1:
 	add $t6,$t6,$a2
+	jr $ra
 
 MaxJ3:
 	add $t6,$t6,$a3
+	jr $ra
 
 MaxJ2:
 	add $t5,$t5,$a2
-
+	jr $ra
+	
 MaxJ4:
 	add $t5,$t5,$a3
-
+	jr $ra
 
 ReiniciarValores:
 
@@ -763,22 +801,52 @@ ReiniciarValores:
 	jr $ra
 
 
-RevisarFinJuego:
-	
+FinJuegoNormal:
+
 	bgt $t5,99,FinalizarJuego
 	bgt $t6,99,FinalizarJuego
 	jr $ra
 
+FinJuegoPorTranca:
+
+	move $a0,$t5
+	move $a1,$t6
+	sub $a2,$a0,$a1
+	bgezal $a2,GanaJuegoE1
+	bltzal $a2,GanaJuegoE2
+	jr $ra				#NO HACE FALTA REGRESAR, COLOCAR COMO UN JUMP EN VEZ DE UN JAL, al menos que se retorne algo (0 si gana E1 1 si gana E2)
+	
+GanaJuegoE1:
+	addi $v0,$zero,0
+	b FinalizarJuego
+
+
+GanaJuegoE2:
+	addi $v0,$zero,1
+	b FinalizarJuego
+
 FinalizarJuego:
+	beqz $v0,MostrarGanadorE1
+	bnez $v0,MostrarGanadorE2
+
+MostrarGanadorE1:
+
 	#Mostrar puntajes
 	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
-	#Si $v0 es 0, cerrar programa con syscall
+	#Si $v0 es 0, cerrar programa con syscall 10
 	#Si $v0 es 1,saltar a Init con j
 
+MostrarGanadorE2:
+
+#Mostrar puntajes
+	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
+	#Si $v0 es 0, cerrar programa con syscall 10
+	#Si $v0 es 1,saltar a Init con j
+	
 PasarTurno:
 	addi $t4,$t4,1
 	addi $t8,$t8,1
-	beq $t8,4,RondaTerminadaTranca
+	beq $t8,4,FinRondaPorTranca
 	beq $t4,5,ReiniciarTurno
 	j Ciclo2
 
@@ -798,6 +866,5 @@ Caso2:
 	move $v0,$t4
 	addi $v0,$v0,-1
 	jr $ra
-	
 	
 	
