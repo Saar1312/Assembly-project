@@ -33,14 +33,14 @@ MensajeTablero:  .asciiz "\nTablero\n"
 FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, por favor vuelva a intentarlo. "
 Equipo1: 	 .asciiz "(E1) "
 Equipo2: 	 .asciiz "(E2) "
-ZapateroE1: 	 .asciiz "El equipo 1 ha ganado por zapatero     "
-ZapateroE2:	 .asciiz "El equipo 2 ha ganado por zapatero     "
-ChancletaE1: 	 .asciiz "El equipo 1 ha ganado por chancleta     "
-ChancletaE2:	 .asciiz "El equipo 2 ha ganado por chancleta     "
-MensajeFinal:    .asciiz "Puntajes finales: "
-MensajeGanadores:.asciiz " Ganadores: \n "
-VolverAJugar:	 .asciiz " Para juegar de nuevo introduzca 1, para finalizar el juego ingrese 0: "
-MensajeEmpate: 	 .asciiz "Empate\n"
+ZapateroE1: 	 .asciiz "El equipo 1 ha ganado por zapatero     " NUEVOOOOOOOOOOO
+ZapateroE2:	 .asciiz "El equipo 2 ha ganado por zapatero     "NUEVOOOOOOOOOOO
+ChancletaE1: 	 .asciiz "El equipo 1 ha ganado por chancleta     "NUEVOOOOOOOOOOO
+ChancletaE2:	 .asciiz "El equipo 2 ha ganado por chancleta     "NUEVOOOOOOOOOOO
+MensajeFinal:    .asciiz "Puntajes finales: "NUEVOOOOOOOOOOO
+MensajeGanadores:.asciiz " Ganadores: \n "NUEVOOOOOOOOOOO
+VolverAJugar:	 .asciiz " Para juegar de nuevo introduzca 1, para finalizar el juego ingrese 0: "NUEVOOOOOOOOOOO
+MensajeEmpate: 	 .asciiz "Empate\n"NUEVOOOOOOOOOOO
 
 .align 2
 
@@ -93,7 +93,7 @@ PuntajeE2:	.word 0
 						#En este punto $s0 contiene el jugador con la cochina
 Ciclo1:
 
-	jal ReiniciarValores
+	jal ReiniciarValores     NUEVOOOOOOOOOOO
 	jal AumentarTurno
 	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
 	add $a3,$zero,27 		#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
@@ -135,7 +135,7 @@ Ciclo2:
 	lw $ra,0($sp)
 	b Ciclo2
 
-	.macro ImprimirString(%x)
+	.macro ImprimirString(%x)			NUEVOOOOOOOOOOO
 	.text
 	la $a0,%x
 	addi $v0,$zero,4
@@ -383,7 +383,7 @@ SalirPrimero: #En $a0 esta la ficha que se desea colocar
 
 ImprimirTablero:
 
-	beq $s5,1,TableroVacio
+	beq $s5,1,TableroVacio			NUEVOOOOOOOOOOO
 	lb $a3,1($a1)		#Carga del tablero la parte izquierda de la ficha
 	sll $a3,$a3,8		#Hace un shift para poder hacer la mascara
 	ori $a3,$a3,40	#Or con una mascara 0000 0000 0010 1000 = 0 0 2 8 con 28 = "(" y 0 0 para dejar el byte del numero
@@ -408,11 +408,11 @@ ImprimirTablero:
 	jr $ra
 	
 	
-TableroVacio:
+TableroVacio:			NUEVOOOOOOOOOOO
 	ImprimirString(SaltoLinea)
 	jr $ra
 	
-MensajesPantalla:
+MensajesPantalla:		
 
 	la $a0,MensajePuntos
 	addi $v0,$zero,4
@@ -491,12 +491,12 @@ ImprimirFichas:
 	bne $a1,$a2,ImprimirFichas
 	la $a0,SeleccionFicha
 	syscall
-	beq $s5,1,SaltarImpresion
+	beq $s5,1,SaltarImpresion	NUEVOOOOOOOOOOO
 	la $a0,SeleccionFicha2
 	syscall
 	jr $ra
 	
-SaltarImpresion:
+SaltarImpresion:	NUEVOOOOOOOOOOO
 	jr $ra
 	
 LimpiarPantalla:
@@ -506,7 +506,7 @@ LimpiarPantalla:
 	jr $ra
 
 HacerJugada:
-	beq $s5,1,PrimeraJugada	#Nuevo registro para saber si la jugada que se va a hacer sera sobre un tablero vacio
+	beq $s5,1,PrimeraJugada	   NUEVOOOOOOOOOOO #Nuevo registro para saber si la jugada que se va a hacer sera sobre un tablero vacio
 	addi $v0,$zero,5
 	syscall
 	move $a2,$v0
@@ -635,7 +635,7 @@ AgregarIzq2:
 	beq $t4,5,ReiniciarTurno
 	jr $ra
 
-PrimeraJugada:
+PrimeraJugada:			NUEVOOOOOOOOOOO
 	addi $v0,$zero,5
 	syscall
 	move $a2,$v0
@@ -859,7 +859,7 @@ ReiniciarValores:
 	addi $t8,$zero,0		#Contador de turnos pasados
 	la $s6,Tablero			#Direccion de un extremo del tablero 
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero
-	addi $s5,$zero,1		#Para que al comenzar la proxima ronda la primera jugada se haga manual y no buscando la cochina
+	addi $s5,$zero,1		NUEVOOOOOOOOOOO	#Para que al comenzar la proxima ronda la primera jugada se haga manual y no buscando la cochina
 	jr $ra
 
 #Verifica si termino el juego porque algun jugador se quedo sin fichas
@@ -869,27 +869,27 @@ VerificarFinJuego:
 	bgt $t6,99,MostrarGanador
 	jr $ra
 
-MostrarGanador:
+MostrarGanador:			NUEVOOOOOOOOOOO
 	jal LimpiarPantalla
 	jal TipoDeVictoria
 	jal PuntajesFinales
 	jal PreguntarJuegoNuevo
 	
 	#Para aumentar el turno sin  tener que saltar al ciclo 2
-AumentarTurno:
+AumentarTurno:			NUEVOOOOOOOOOOO
 	addi $t4,$t4,1
 	beq $t4,5,TurnoEnUno
 	jr $ra
 	#Igual que ReiniciarTurno pero regresando a $ra
-TurnoEnUno:
+TurnoEnUno:			NUEVOOOOOOOOOOO
 	addi $t4,$zero,1
 	jr $ra
 	
 
 PasarTurno:
-	addi $t8,$t8,1
+	addi $t8,$t8,1		
 	beq $t8,4,FinRondaPorTranca
-	addi $t4,$t4,1
+	addi $t4,$t4,1			NUEVOOOOOOOOOOO (antes estaba arriba del beq)
 	beq $t4,5,ReiniciarTurno
 	j Ciclo2
 
@@ -911,7 +911,7 @@ Caso2:
 	jr $ra
 	
 	
-TipoDeVictoria:
+TipoDeVictoria:		NUEVOOOOOOOOOOO
 	move $a0,$t5
 	move $a1,$t6
 	beqz $a0,GanaPorZapateroE2
@@ -923,32 +923,32 @@ TipoDeVictoria:
 	beq $a0,$a1,GanaPorChancletaE1
 	
 	
-GanaPorZapateroE1:
+GanaPorZapateroE1:			NUEVOOOOOOOOOOO
 	la $a0,ZapateroE1
 	addi $v0,$zero,4
 	syscall
 	jr $ra
 	
-GanaPorZapateroE2:
+GanaPorZapateroE2:			NUEVOOOOOOOOOOO
 	la $a0,ZapateroE2
 	addi $v0,$zero,4
 	syscall
 	jr $ra
-
-GanaPorChancletaE1:
+	
+GanaPorChancletaE1:			NUEVOOOOOOOOOOO
 	la $a0,ChancletaE1
 	addi $v0,$zero,4
 	syscall
 	jr $ra
 
-GanaPorChancletaE2:
+GanaPorChancletaE2:			NUEVOOOOOOOOOOO
 	la $a0,ChancletaE2
 	addi $v0,$zero,4
 	syscall
 	jr $ra
 
 	
-PuntajesFinales:
+PuntajesFinales:			NUEVOOOOOOOOOOO
 	la $a0,MensajeFinal
 	addi $v0,$zero,4
 	syscall
@@ -975,26 +975,26 @@ PuntajesFinales:
 	bgt $a1,$a0,ImprimirE1
 	
 	
-Empate:
+Empate:			NUEVOOOOOOOOOOO
 
 	ImprimirString(MensajeEmpate)
 	jr $ra
 	
 	
-ImprimirE1:
+ImprimirE1:		NUEVOOOOOOOOOOO
 
 	ImprimirString(ImprimirJ1)
 	ImprimirString(ImprimirJ3)
 	jr $ra
 	
-ImprimirE2:
+ImprimirE2:		NUEVOOOOOOOOOOO
 
 	ImprimirString(ImprimirJ2)
 	ImprimirString(ImprimirJ4)
 	jr $ra
 	
 
-PreguntarJuegoNuevo:
+PreguntarJuegoNuevo:		NUEVOOOOOOOOOOO
 
 	ImprimirString(VolverAJugar)
 	addi $v0,$zero,5
@@ -1002,7 +1002,7 @@ PreguntarJuegoNuevo:
 	bnez $v0,Init
 	beqz $v0,Salir
 	
-Salir:
+Salir:			NUEVOOOOOOOOOOO
 	addi $v0,$zero,10
 	syscall
 	
