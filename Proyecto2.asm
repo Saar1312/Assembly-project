@@ -10,7 +10,7 @@
 #AGREGAR AL LADO DEL NOMBRE DEL JUGADOR E1 SI ES DEL EQUIPO 1 Y E2..
 #FALTA LA MARPARIDA BASURA DE LA CHANCLETA Y EL ZAPATO HACER FUNCIOOOOON PARA ESTO
 #TERMINAR ULTIMAS FUNCIONES
-
+#HACER MACROS PARA IMPRESIONES Y PARA GUARDAR $ra EN LA PILA
 			
 				
 	.data 
@@ -22,7 +22,7 @@ Path:   	 .asciiz "PIEDRAS.txt"
 SaltoLinea: 	 .asciiz "\n"
 SaltosLinea: 	 .asciiz "\n\n\n\n\n"
 Mensaje1:	 .asciiz "\nPor favor introduzca su nombre (debe tener un maximo de 20 caracteres):  "
-MensajeLoadError:.asciiz "Error al cargar el archivo. Por favor verifique que el archivo se encuentre en la ruta correcta."
+MensajeLoadError:.asciiz "Error al cargar el archivo: por favor verifique que el archivo se encuentre en la ruta correcta. Finalizando ejecucion."
 MensajePuntos:   .asciiz "Puntos: "
 MensajeEquipo1:  .asciiz "Equipo 1:"
 MensajeEquipo2:  .asciiz " Equipo 2:"
@@ -33,6 +33,14 @@ MensajeTablero:  .asciiz "\nTablero\n"
 FichaIncorrecta: .asciiz "\nLa ficha indicada no puede ser jugada, por favor vuelva a intentarlo. "
 Equipo1: 	 .asciiz "(E1) "
 Equipo2: 	 .asciiz "(E2) "
+ZapateroE1: 	 .asciiz "El equipo 1 ha ganado por zapatero     "
+ZapateroE2:	 .asciiz "El equipo 2 ha ganado por zapatero     "
+ChancletaE1: 	 .asciiz "El equipo 1 ha ganado por chancleta     "
+ChancletaE2:	 .asciiz "El equipo 2 ha ganado por chancleta     "
+MensajeFinal:    .asciiz "Puntajes finales: "
+MensajeGanadores:.asciiz " Ganadores: \n "
+VolverAJugar:	 .asciiz " Para juegar de nuevo introduzca 1, para finalizar el juego ingrese 0: "
+MensajeEmpate: 	 .asciiz "Empate\n"
 
 .align 2
 
@@ -77,19 +85,20 @@ TurnoActual:	.word 0 #Indica quien tiene el turno actual (va del 1 al 4)
 PuntajeE1:	.word 0
 PuntajeE2:	.word 0
 
-
+#S y v main t, a funcion
 	.text
 	jal LimpiarPantalla
 	jal Init
 	b Ciclo2			#Se podria poner a Init como una etiqueta y no como funcion y se salta a Ciclo2 dentro de ella
 						#En este punto $s0 contiene el jugador con la cochina
 Ciclo1:
-	jal Shuffle
+
 	jal ReiniciarValores
-	jal RepartirFichas
-	jal SalirPrimero
-	
-	
+	jal AumentarTurno
+	la $a2,Fichas			#$a2 posee la direccion del inicio del arreglo
+	add $a3,$zero,27 		#$a3 comienza en el final del arreglo y va recorriendolo del final al inicio hasta que $a3=$a2
+	jal Shuffle
+
 	
 	
 Ciclo2:
@@ -121,14 +130,29 @@ Ciclo2:
 	jal RevisarFinRonda
 	sw $ra,0($sp)		
 	addi $sp,$sp,-4
-	jal FinJuegoNormal
+	jal VerificarFinJuego
 	addi $sp,$sp,4
 	lw $ra,0($sp)
 	b Ciclo2
 
-
+	.macro ImprimirString(%x)
+	.text
+	la $a0,%x
+	addi $v0,$zero,4
+	syscall
+	.end_macro
+	
+	.macro ImprimirEntero(%x)
+	.text
+	move $a0,%x
+	addi $v0,$zero,1
+	syscall
+	.end_macro
+	
+	
 
 Init:	#Variables que seran globales durante todo el programa para no accesar tanto a memoria, se pueden quitar y pasar como parametros
+
 	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
 	la $t3,Fichas			#Comienzo del arreglo con las Fichas
 	addi $t4,$zero,0		#Turno (1,2,3,4)
@@ -256,7 +280,7 @@ CargarFichas:
 Shuffle:			#ESTA INEFICIENTE POR TRANSFORMAR a $a3 y $a0 en direcciones y luego en posiciones del arreglo Fichas
 				#colocar todo en funcion de direcciones	
 	add $a1,$zero,$a3		
-	addi $v0,$zero,42		#Se halla un numero random entre 0 y 28
+	addi $v0,$zero,42		#Se halla un numero random entre 0 y 27
 	addi $a0,$a0,0
 	syscall
 	sll $a3,$a3,1			#$a3 (recorre el arreglo) esta entre 0 y 26 y debe estar entre 0 y 56 para recorrer 
@@ -359,6 +383,7 @@ SalirPrimero: #En $a0 esta la ficha que se desea colocar
 
 ImprimirTablero:
 
+	beq $s5,1,TableroVacio
 	lb $a3,1($a1)		#Carga del tablero la parte izquierda de la ficha
 	sll $a3,$a3,8		#Hace un shift para poder hacer la mascara
 	ori $a3,$a3,40	#Or con una mascara 0000 0000 0010 1000 = 0 0 2 8 con 28 = "(" y 0 0 para dejar el byte del numero
@@ -382,6 +407,10 @@ ImprimirTablero:
 	syscall
 	jr $ra
 	
+	
+TableroVacio:
+	ImprimirString(SaltoLinea)
+	jr $ra
 	
 MensajesPantalla:
 
@@ -462,8 +491,12 @@ ImprimirFichas:
 	bne $a1,$a2,ImprimirFichas
 	la $a0,SeleccionFicha
 	syscall
+	beq $s5,1,SaltarImpresion
 	la $a0,SeleccionFicha2
 	syscall
+	jr $ra
+	
+SaltarImpresion:
 	jr $ra
 	
 LimpiarPantalla:
@@ -473,6 +506,7 @@ LimpiarPantalla:
 	jr $ra
 
 HacerJugada:
+	beq $s5,1,PrimeraJugada	#Nuevo registro para saber si la jugada que se va a hacer sera sobre un tablero vacio
 	addi $v0,$zero,5
 	syscall
 	move $a2,$v0
@@ -600,6 +634,39 @@ AgregarIzq2:
 	addi $t4,$t4,1
 	beq $t4,5,ReiniciarTurno
 	jr $ra
+
+PrimeraJugada:
+	addi $v0,$zero,5
+	syscall
+	move $a2,$v0
+	addi $v0,$zero,0		#Reiniciando el contador de pasadas de turno porque hay que contar las pasadas de turno consecutivas
+	addi $a2,$a2,-1
+	sll $a2,$a2,1
+	move $a3,$t4
+	addi $a3,$a3,-1
+	mul $a3,$a3,14
+	add $a3,$a3,$a2
+	add $a3,$a3,$t3
+	lb $t0,0($a3)
+	lb $t1,1($a3)
+	sb $t0,0($s6)
+	sb $t1,0($s7)
+	addi $sp,$sp,-20
+	sw $a0,0($sp)
+	sw $a1,4($sp)
+	sw $a2,8($sp)
+	sw $t0,12($sp)
+	sw $ra,16($sp)
+	jal Desempilar
+	lw $a0,0($sp)
+	lw $a1,4($sp)
+	lw $a2,8($sp)
+	lw $t0,12($sp)
+	lw $ra,16($sp)
+	addi $sp,$sp,20
+	addi $s5,$zero,0
+	addi $t7,$t7,12
+	j Ciclo2
 	
 
 Desempilar:
@@ -720,6 +787,7 @@ Suma:					#Colocar a $v0 a sumarse en funcion de si mismo
 
 FinRondaPorTranca:
 	
+	addi $t8,$zero,0
 	lw $a0,4($t2)
 	lw $a1,0($t2)
 	sw $a2,0($sp)
@@ -762,15 +830,9 @@ FinRondaPorTranca:
 	lw $a2,0($sp)
 	move $a3,$v0
 	sub $t0,$a2,$a3
-	bgezal $t0,MaxJ2
+	bgezal $t0,MaxJ2 	#Se quito el empilado de $ra
 	bltzal $t0,MaxJ4
-	addi $sp,$sp,4
-	lw $ra,0($sp)
-	sw $ra,0($sp)
-	addi $sp,$sp,-4
-	jal FinJuegoPorTranca
-	addi $sp,$sp,4
-	lw $ra,0($sp)
+	jal VerificarFinJuego
 	j Ciclo1
 	
 MaxJ1:
@@ -793,60 +855,41 @@ ReiniciarValores:
 
 	la $t2,FichasJugadores		#Apuntador al arreglo FichasJugadores
 	la $t3,Fichas			#Comienzo del arreglo con las Fichas
-	addi $t4,$zero,0		#Turno (1,2,3,4)
 	la $t7,Tablero			#Apuntador al tablero que se ira moviendo apuntado a la proxima dir libre
 	addi $t8,$zero,0		#Contador de turnos pasados
 	la $s6,Tablero			#Direccion de un extremo del tablero 
 	addi $s7,$s6,1			#Direccion del otro extremo del tablero
+	addi $s5,$zero,1		#Para que al comenzar la proxima ronda la primera jugada se haga manual y no buscando la cochina
 	jr $ra
 
+#Verifica si termino el juego porque algun jugador se quedo sin fichas
+VerificarFinJuego:
 
-FinJuegoNormal:
-
-	bgt $t5,99,FinalizarJuego
-	bgt $t6,99,FinalizarJuego
+	bgt $t5,99,MostrarGanador
+	bgt $t6,99,MostrarGanador
 	jr $ra
 
-FinJuegoPorTranca:
-
-	move $a0,$t5
-	move $a1,$t6
-	sub $a2,$a0,$a1
-	bgezal $a2,GanaJuegoE1
-	bltzal $a2,GanaJuegoE2
-	jr $ra				#NO HACE FALTA REGRESAR, COLOCAR COMO UN JUMP EN VEZ DE UN JAL, al menos que se retorne algo (0 si gana E1 1 si gana E2)
+MostrarGanador:
+	jal LimpiarPantalla
+	jal TipoDeVictoria
+	jal PuntajesFinales
+	jal PreguntarJuegoNuevo
 	
-GanaJuegoE1:
-	addi $v0,$zero,0
-	b FinalizarJuego
-
-
-GanaJuegoE2:
-	addi $v0,$zero,1
-	b FinalizarJuego
-
-FinalizarJuego:
-	beqz $v0,MostrarGanadorE1
-	bnez $v0,MostrarGanadorE2
-
-MostrarGanadorE1:
-
-	#Mostrar puntajes
-	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
-	#Si $v0 es 0, cerrar programa con syscall 10
-	#Si $v0 es 1,saltar a Init con j
-
-MostrarGanadorE2:
-
-#Mostrar puntajes
-	#Pedir que se ingrese 0 para terminar juego,1 para volver a jugar
-	#Si $v0 es 0, cerrar programa con syscall 10
-	#Si $v0 es 1,saltar a Init con j
-	
-PasarTurno:
+	#Para aumentar el turno sin  tener que saltar al ciclo 2
+AumentarTurno:
 	addi $t4,$t4,1
+	beq $t4,5,TurnoEnUno
+	jr $ra
+	#Igual que ReiniciarTurno pero regresando a $ra
+TurnoEnUno:
+	addi $t4,$zero,1
+	jr $ra
+	
+
+PasarTurno:
 	addi $t8,$t8,1
 	beq $t8,4,FinRondaPorTranca
+	addi $t4,$t4,1
 	beq $t4,5,ReiniciarTurno
 	j Ciclo2
 
@@ -866,5 +909,102 @@ Caso2:
 	move $v0,$t4
 	addi $v0,$v0,-1
 	jr $ra
+	
+	
+TipoDeVictoria:
+	move $a0,$t5
+	move $a1,$t6
+	beqz $a0,GanaPorZapateroE2
+	beqz $a1,GanaPorZapateroE1
+	mul $a0,$a0,10
+	beq $a0,$a1,GanaPorChancletaE2
+	move $a0,$t5
+	mul $a1,$a1,10
+	beq $a0,$a1,GanaPorChancletaE1
+	
+	
+GanaPorZapateroE1:
+	la $a0,ZapateroE1
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+	
+GanaPorZapateroE2:
+	la $a0,ZapateroE2
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+
+GanaPorChancletaE1:
+	la $a0,ChancletaE1
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+
+GanaPorChancletaE2:
+	la $a0,ChancletaE2
+	addi $v0,$zero,4
+	syscall
+	jr $ra
+
+	
+PuntajesFinales:
+	la $a0,MensajeFinal
+	addi $v0,$zero,4
+	syscall
+	la $a0,MensajeEquipo1
+	syscall
+	move $a0,$t5
+	addi $v0,$zero,1
+	syscall
+	la $a0,MensajeEquipo2
+	addi $v0,$zero,4
+	syscall
+	move $a0,$t6
+	addi $v0,$zero,1
+	syscall
+	la $a0,SaltoLinea
+	addi $v0,$zero,4
+	syscall
+	la $a0,MensajeGanadores
+	syscall
+	move $a0,$t5
+	move $a1,$t6
+	beq $a0,$a1,Empate
+	bgt $a0,$a1,ImprimirE1
+	bgt $a1,$a0,ImprimirE1
+	
+	
+Empate:
+
+	ImprimirString(MensajeEmpate)
+	jr $ra
+	
+	
+ImprimirE1:
+
+	ImprimirString(ImprimirJ1)
+	ImprimirString(ImprimirJ3)
+	jr $ra
+	
+ImprimirE2:
+
+	ImprimirString(ImprimirJ2)
+	ImprimirString(ImprimirJ4)
+	jr $ra
+	
+
+PreguntarJuegoNuevo:
+
+	ImprimirString(VolverAJugar)
+	addi $v0,$zero,5
+	syscall
+	bnez $v0,Init
+	beqz $v0,Salir
+	
+Salir:
+	addi $v0,$zero,10
+	syscall
+	
 	
 	
